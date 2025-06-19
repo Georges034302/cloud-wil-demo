@@ -13,9 +13,8 @@
 ## 🧰 Requirements
 
 - Azure subscription with **Contributor** access
-- **Bicep CLI** installed (`bicep --version`)
-- **Azure CLI** installed
-- **Visual Studio Code** with **Bicep extension** (recommended)
+- **Azure CLI** installed (`az version`)
+- **Visual Studio Code** or equivalent editor
 
 ---
 
@@ -23,75 +22,112 @@
 
 ### 1️⃣ Author `azuredeploy.json` for Web App
 
-📝 **What is it?** An ARM template (JSON format) that defines the structure and configuration of your Azure resources.
+This is the ARM template that defines the infrastructure.
 
-🔹 **Resources defined:**
+#### 🔹 `azuredeploy.json` (ARM Template):
 
-- **App Service Plan**
-  - Controls pricing tier (e.g., Free, Premium)
-  - Allocates compute resources
-- **Web App**
-  - Hosting platform for websites and APIs
-  - Auto-linked to App Service Plan
-
-💡 **Why important?**
-
-- Enables **Infrastructure as Code (IaC)**
-- Avoids manual portal setup
-- Makes deployments repeatable and version-controlled
-- Familiarizes you with Azure's native JSON syntax
+```json
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "webAppName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the Web App."
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "australiaeast",
+      "metadata": {
+        "description": "Azure location"
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2022-03-01",
+      "name": "[concat(parameters('webAppName'), '-plan')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "F1",
+        "tier": "Free"
+      },
+      "properties": {}
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2022-03-01",
+      "name": "[parameters('webAppName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', concat(parameters('webAppName'), '-plan'))]"
+      }
+    }
+  ]
+}
+```
 
 ---
 
 ### 2️⃣ Create `azuredeploy.parameters.json`
 
-📁 This file defines values like `location` and `webAppName` to pass into the ARM template.
+#### 🔹 Sample `azuredeploy.parameters.json`:
 
-📝 **Tip:** Replace the default value (e.g., `hms-web-portal-1234`) with a **globally unique name**:
+```json
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "parameters": {
+    "webAppName": {
+      "value": "hms-web-portal-1234"
+    },
+    "location": {
+      "value": "australiaeast"
+    }
+  }
+}
+```
 
-- Lowercase
-- No spaces
-- Alphanumeric only
-
-✅ Required for parameterized, reusable deployment templates.
+📝 Ensure `webAppName` is globally unique (lowercase, no spaces).
 
 ---
 
 ### 3️⃣ Deploy via Azure Portal
 
-🔸 **Steps:**
+#### 🔹 Steps:
 
-1. Go to [https://portal.azure.com](https://portal.azure.com)
-2. Search for **"Deploy a custom template"**
-3. Select **Template deployment (Deploy using custom template)**
-4. Click **Build your own template in the editor**
-5. Paste in content from `azuredeploy.json`
-6. Click **Save**
-7. Enter:
-   - **Resource Group**: Create or select one (e.g., `lab2b-rg`)
-   - **Location**: Australia East
-   - **Web App Name**: Globally unique
-8. Click **Review + Create → Create**
+1. Visit [Azure Portal](https://portal.azure.com)
+2. Search: **Deploy a custom template** → Select **Template deployment (Deploy using custom template)**
+3. Click **Build your own template in the editor**
+4. Paste the contents of `azuredeploy.json`
+5. Click **Save**
+6. Fill in the form:
+   - **Resource Group**: Create/select `lab2b-rg`
+   - **Web App Name**: Provide unique name
+   - **Location**: `Australia East`
+7. Click **Review + Create** → **Create**
 
-✅ Wait for confirmation on deployment screen.
+✅ Wait for deployment to complete.
 
 ---
 
 ### 4️⃣ Deploy via Azure CLI
 
-🧪 Ensure you are signed in:
+#### 🔹 Ensure you are logged in:
 
 ```bash
 az login
 ```
 
-🔸 **Create Resource Group:**
+#### 🔹 Create Resource Group:
 
 ```bash
 az group create --name lab2b-rg --location australiaeast
 ```
 
-🔸 **Deploy ARM Template:**
+#### 🔹 Deploy ARM Template:
 
 ```bash
 az deployment group create \
@@ -100,30 +136,53 @@ az deployment group create \
   --parameters @azuredeploy.parameters.json
 ```
 
-✅ CLI will confirm with `"provisioningState": "Succeeded"`
+✅ Successful deployment will return `"provisioningState": "Succeeded"`
 
 ---
 
 ### 5️⃣ Verify in Azure Portal
 
-🔍 **Check Resource Group:**
+#### 🔍 Check:
 
 - Navigate to **Resource groups** → `lab2b-rg`
+- Confirm:
+  - App Service Plan named like `hms-web-portal-1234-plan`
+  - Web App named like `hms-web-portal-1234`
 
-✅ You should see:
+#### 🧪 Test Web App:
 
-- **App Service Plan** named like `hms-web-portal-1234-plan`
-- **Web App** named like `hms-web-portal-1234`
-
-🧪 **Test the Web App:**
-
-1. Click on the Web App
-2. Visit its default URL (e.g., `https://hms-web-portal-1234.azurewebsites.net`)
-3. Explore tabs: **Configuration**, **SSL**, **Logs**
-
-✅ You've successfully deployed a Web App using an ARM template!
+1. Click the Web App
+2. Copy the URL (e.g., `https://hms-web-portal-1234.azurewebsites.net`)
+3. Open in browser
 
 ---
 
-✔️ **Lab complete – you’ve used native JSON ARM templates to define and deploy cloud infrastructure using both the Portal and CLI.**
+## 📂 Recommended Folder Structure
+
+```
+lab-2b-arm-deployment/
+├── azuredeploy.json
+├── azuredeploy.parameters.json
+└── deploy.sh    # Optional script
+```
+
+#### 🔹 `deploy.sh` Script (Optional):
+
+```bash
+#!/bin/bash
+RG="lab2b-rg"
+PARAMS="azuredeploy.parameters.json"
+
+az group create --name $RG --location australiaeast
+az deployment group create \
+  --resource-group $RG \
+  --template-file azuredeploy.json \
+  --parameters @$PARAMS
+```
+
+---
+
+## ✅ Lab Complete
+
+You've created and deployed Azure infrastructure using native JSON ARM templates through both CLI and Portal. Excellent work!
 

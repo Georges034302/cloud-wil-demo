@@ -1,37 +1,29 @@
-# 📈 Lab 2-F: Setup Monitoring & Logging for Azure Kubernetes Service (AKS)
+# 📈 Lab 2-F: Setup Monitoring & Logging for Azure Kubernetes Service (AKS) Using CLI, Portal, and ARM Template
 
 ## 🎯 Objective
 
 - Enable Azure Monitor and Container Insights on AKS
-- Configure and link a Log Analytics workspace
-- Run Kusto Query Language (KQL) queries on AKS logs
+- Configure and link a Log Analytics Workspace
+- Run KQL queries on container logs
 - Create alert rules from log conditions
-- Visualize metrics and performance in Azure Portal
+- Visualize metrics and container performance
 
 ---
 
 ## 🧰 Requirements
 
-- **Azure CLI**
-- **kubectl** installed (or via `az aks install-cli`)
+- **Azure CLI** installed
+- **kubectl** installed (`az aks install-cli` if needed)
 - **Docker Desktop** running
-- Working AKS cluster (from **Lab 2-E**)
+- **Existing AKS cluster** (e.g., `lab2e-aks` from Lab 2-E)
 
 ---
 
 ## 👣 Lab Instructions
 
-### 1️⃣ Ensure Prerequisites Are Met
+### 1️⃣ Create Log Analytics Workspace
 
-You should already have:
-
-- AKS cluster deployed (e.g., `lab2e-aks`)
-- Azure CLI access
-- Connected `kubectl` to your AKS cluster
-
----
-
-### 2️⃣ Create Log Analytics Workspace
+#### 🔹 Azure CLI:
 
 ```bash
 az monitor log-analytics workspace create \
@@ -40,40 +32,57 @@ az monitor log-analytics workspace create \
   --location australiaeast
 ```
 
-🔍 **Tip:** This workspace will collect metrics and logs from the cluster.
+#### 🔹 Azure Portal:
+
+1. Go to [Azure Portal](https://portal.azure.com)
+2. Search for **Log Analytics workspaces** → **+ Create**
+3. Select Resource Group: `lab2e-rg`
+4. Name: `lab2e-logs`
+5. Region: `Australia East`
+6. Review + Create → Create
+
+✅ This workspace will receive telemetry from your AKS cluster.
 
 ---
 
-### 3️⃣ Enable Monitoring for AKS Cluster
+### 2️⃣ Enable Monitoring on AKS Cluster
+
+#### 🔹 Azure CLI:
 
 ```bash
 az aks enable-addons \
   --resource-group lab2e-rg \
   --name lab2e-aks \
   --addons monitoring \
-  --workspace-resource-id "/subscriptions/<sub-id>/resourceGroups/lab2e-rg/providers/Microsoft.OperationalInsights/workspaces/lab2e-logs"
+  --workspace-resource-id "/subscriptions/<subscription-id>/resourceGroups/lab2e-rg/providers/Microsoft.OperationalInsights/workspaces/lab2e-logs"
 ```
 
-✅ This enables Azure Monitor and links it to your Log Analytics workspace.
+#### 🔹 Azure Portal:
+
+1. Go to **Resource Groups** → `lab2e-rg`
+2. Open AKS cluster `lab2e-aks`
+3. Click **Insights** → If not enabled, click **Enable monitoring**
+4. Choose existing workspace: `lab2e-logs`
+5. Save settings
+
+✅ Container Insights is now connected.
 
 ---
 
-### 4️⃣ Access Container Insights in Azure Portal
+### 3️⃣ View Logs and Metrics (Portal)
 
-1. Visit [https://portal.azure.com](https://portal.azure.com)
-2. Go to **Resource Groups** → `lab2e-rg`
-3. Open your AKS cluster → Click **Insights**
-4. Explore:
-   - Node CPU, memory, and disk performance
-   - Pod metrics and restart counts
-   - Container logs and live queries
+1. From AKS cluster → Click **Insights** → **Monitoring**
+2. Explore:
+   - Node CPU & memory
+   - Pod/container logs
+   - Container restart trends
 
 ---
 
-### 5️⃣ Run Sample KQL Queries
+### 4️⃣ Run KQL Query in Azure Logs
 
-1. From your AKS cluster in the portal, click **Logs**
-2. Paste this KQL query to show logs:
+1. In AKS cluster → Click **Logs** → Choose workspace `lab2e-logs`
+2. Paste:
 
 ```kusto
 ContainerLog
@@ -81,40 +90,146 @@ ContainerLog
 | sort by TimeGenerated desc
 ```
 
-3. Modify time ranges, pod names, or message filters to refine results
+3. Modify query to filter by message, pod name, or severity.
 
 ---
 
-### 6️⃣ Create an Alert Rule
+### 5️⃣ Create Alert Rule (Portal)
 
-1. Navigate to **Log Analytics Workspace** → `lab2e-logs`
-2. Go to **Alerts** → **+ New alert rule**
-3. Set **Resource** = `lab2e-logs`
-4. Define **Condition** using a KQL query (e.g., matching errors):
+1. Go to **Monitor** → **Alerts** → **+ Create Alert Rule**
+2. Set Resource: `lab2e-logs` (Log Analytics Workspace)
+3. Define condition using KQL:
 
 ```kusto
 ContainerLog
-| where LogEntry contains "error"
+| where LogEntry has "error"
 ```
 
-5. Define **Action Group** to email notifications
-6. Click **Create**
-
-✅ Now you’ll be notified on important container-level events.
+4. Add Action Group (Email/SMS)
+5. Create alert rule
 
 ---
 
-### 7️⃣ Visualize Live Metrics
+### 6️⃣ ARM Template to Enable Monitoring
 
-1. Return to AKS cluster → **Insights**
-2. Click **Metrics** tab
-3. Use Metrics Explorer to visualize:
-   - Pod counts
-   - Container restart rates
-   - Node CPU usage
-4. Optionally: Pin graphs to a custom Azure Dashboard
+#### 🔹 `aks-monitoring-enable.json`
+
+```json
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "aksName": { "type": "string" },
+    "location": { "type": "string" },
+    "workspaceResourceId": { "type": "string" }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.ContainerService/managedClusters",
+      "apiVersion": "2023-01-01",
+      "name": "[parameters('aksName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "addonProfiles": {
+          "omsagent": {
+            "enabled": true,
+            "config": {
+              "logAnalyticsWorkspaceResourceID": "[parameters('workspaceResourceId')]"
+            }
+          }
+        }
+      }
+    }
+  ]
+}
+```
+
+#### 🔹 `aks-monitoring-enable.parameters.json`
+
+```json
+{
+  "parameters": {
+    "aksName": { "value": "lab2e-aks" },
+    "location": { "value": "australiaeast" },
+    "workspaceResourceId": {
+      "value": "/subscriptions/<subscription-id>/resourceGroups/lab2e-rg/providers/Microsoft.OperationalInsights/workspaces/lab2e-logs"
+    }
+  }
+}
+```
+
+#### 🔹 Deploy ARM Template via CLI:
+
+```bash
+az deployment group create \
+  --resource-group lab2e-rg \
+  --template-file aks-monitoring-enable.json \
+  --parameters @aks-monitoring-enable.parameters.json
+```
+
+✅ This enables Azure Monitor on the AKS cluster via ARM.
 
 ---
 
-✔️ **Lab complete – you’ve enabled Azure Monitor, connected Log Analytics, explored AKS logs with KQL, created alert rules, and visualized real-time metrics.**
+### 7️⃣ Post-Deployment Verification Checklist
+
+#### ✅ Check Add-on Enabled:
+
+```bash
+az aks show \
+  --resource-group lab2e-rg \
+  --name lab2e-aks \
+  --query "addonProfiles.omsagent.enabled"
+```
+
+Expected output:
+
+```json
+true
+```
+
+#### ✅ Confirm Workspace Link:
+
+```bash
+az aks show \
+  --resource-group lab2e-rg \
+  --name lab2e-aks \
+  --query "addonProfiles.omsagent.config.logAnalyticsWorkspaceResourceID"
+```
+
+Expected to match your actual workspace resource ID.
+
+#### ✅ Portal Validation:
+
+1. Go to AKS cluster → Click **Insights**
+2. Confirm dashboards load (Node, Pod, Container views)
+
+#### ✅ Run KQL Log Query:
+
+```kusto
+ContainerLog
+| where TimeGenerated > ago(15m)
+| take 10
+```
+
+#### ✅ Generate Dummy Activity:
+
+```bash
+kubectl run hello-debug --image=busybox -it --rm --restart=Never -- /bin/sh -c "echo 'Hello AKS Monitor'; sleep 1"
+```
+
+Then rerun:
+
+```kusto
+ContainerLog
+| where LogEntry contains "Hello AKS Monitor"
+```
+
+✅ This confirms that Container Insights and log ingestion are functioning.
+
+---
+
+## ✅ Lab Complete
+
+You’ve successfully configured monitoring and logging on Azure Kubernetes Service using Azure Monitor, Log Analytics, and alert rules. You also deployed monitoring configuration using ARM templates, CLI, and the Azure Portal.
 

@@ -1,21 +1,20 @@
-# 🐳 Lab 2-D: Containerize a Simple Application with Docker
+# 🐳 Lab 2-D: Containerize a Simple Application with Docker and Deploy via CLI, Portal, and ARM Templates
 
 ## 🎯 Objective
 
 - Install and verify Docker installation
 - Create a simple Python web application
 - Write a Dockerfile to containerize the app
-- Build and run a Docker image
-- View, tag, stop, and remove containers and images
+- Build and run a Docker image locally
+- Deploy containerized app to Azure Container Instance (ACI) using CLI, Portal, and ARM Template
 
 ---
 
 ## 🧰 Requirements
 
-- **Docker** installed ([Install Docker Desktop](https://www.docker.com/products/docker-desktop))
-- **Azure CLI** installed
-- **Docker Extension** in VS Code
-- **Visual Studio Code** with Bicep extension (recommended)
+- **Docker Desktop** installed ([Install Docker](https://www.docker.com/products/docker-desktop))
+- **Azure CLI** installed (`az version`)
+- (Optional) **Visual Studio Code** with Docker extension
 
 ---
 
@@ -23,31 +22,26 @@
 
 ### 1️⃣ Install and Verify Docker
 
-🔹 **Check Docker version:**
+#### 🔹 Verify Docker is working:
 
 ```bash
 docker --version
-```
-
-🔹 **Test Docker installation:**
-
-```bash
 docker run hello-world
 ```
 
-✅ You should see a welcome message confirming Docker is running.
+✅ You should see a welcome message confirming Docker is working.
 
 ---
 
 ### 2️⃣ Create a Simple Web App
 
-🔹 **Create project folder:**
+#### 🔹 Create project folder and files:
 
 ```bash
 mkdir lab2d-docker && cd lab2d-docker
 ```
 
-🔹 **Create a Python app:** Create a file named `app.py`:
+#### 🔹 `app.py`
 
 ```python
 from flask import Flask
@@ -61,7 +55,7 @@ if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
 ```
 
-🔹 **Create requirements file:** Create a file named `requirements.txt`:
+#### 🔹 `requirements.txt`
 
 ```txt
 flask
@@ -69,85 +63,183 @@ flask
 
 ---
 
-### 3️⃣ Write a Dockerfile
+### 3️⃣ Write the Dockerfile
 
-🔹 **Dockerfile:**
+#### 🔹 `Dockerfile`
 
 ```Dockerfile
-# Use a base Python image
 FROM python:3.9-slim
-
-# Set working directory
 WORKDIR /app
-
-# Copy files
 COPY requirements.txt requirements.txt
 RUN pip install -r requirements.txt
 COPY . .
-
-# Command to run the application
 CMD ["python", "app.py"]
 ```
 
-✅ This defines how to build and run your application image.
+---
+
+### 4️⃣ Build and Run the Docker Image Locally
+
+#### 🔹 Build image:
+
+```bash
+docker build -t flask-simple-app .
+```
+
+#### 🔹 Run container:
+
+```bash
+docker run -d -p 5000:5000 flask-simple-app
+```
+
+✅ Access app at: [http://localhost:5000](http://localhost:5000)
 
 ---
 
-### 4️⃣ Build the Docker Image
+### 5️⃣ Push Image to Azure Container Registry (ACR)
 
-🔹 **Build command:**
+#### 🔹 Login to Azure:
 
 ```bash
-docker build -t my-simple-app .
+az login
 ```
 
-✅ Docker reads the Dockerfile, installs dependencies, and tags the image.
+#### 🔹 Create ACR:
+
+```bash
+az acr create --name myacruniquename --resource-group lab2d-rg --sku Basic --location australiaeast
+az acr login --name myacruniquename
+```
+
+#### 🔹 Tag and push image:
+
+```bash
+az acr repository list --name myacruniquename
+
+# Get login server name:
+az acr show --name myacruniquename --query loginServer --output tsv
+
+# Example tagging:
+docker tag flask-simple-app myacruniquename.azurecr.io/flask-simple-app:v1
+
+# Push image:
+docker push myacruniquename.azurecr.io/flask-simple-app:v1
+```
 
 ---
 
-### 5️⃣ Run the Docker Container
-
-🔹 **Run the app:**
+### 6️⃣ Deploy Container to Azure Container Instance (CLI)
 
 ```bash
-docker run -d -p 5000:5000 my-simple-app
+az container create \
+  --resource-group lab2d-rg \
+  --name flask-container \
+  --image myacruniquename.azurecr.io/flask-simple-app:v1 \
+  --cpu 1 \
+  --memory 1 \
+  --registry-login-server myacruniquename.azurecr.io \
+  --registry-username <acr-username> \
+  --registry-password <acr-password> \
+  --dns-name-label flask-demo-lab2d \
+  --ports 5000 \
+  --location australiaeast
 ```
 
-✅ App runs in background, accessible at:
-
-- [http://localhost:5000](http://localhost:5000)
+✅ Visit your container: [http://flask-demo-lab2d.australiaeast.azurecontainer.io:5000](http://flask-demo-lab2d.australiaeast.azurecontainer.io:5000)
 
 ---
 
-### 6️⃣ Manage Containers and Images
+### 7️⃣ Deploy Container via Azure Portal
 
-🔹 **List running containers:**
+1. Go to [Azure Portal](https://portal.azure.com)
+2. Search for **Container Instances** → **Create**
+3. Fill:
+   - **Resource Group**: `lab2d-rg`
+   - **Container Name**: `flask-container`
+   - **Region**: `Australia East`
+   - **Image Source**: Azure Container Registry
+   - **Image**: Select `flask-simple-app:v1`
+   - **Ports**: 5000
+   - **DNS label**: `flask-demo-lab2d`
+4. Click **Review + create** → **Create**
 
-```bash
-docker ps
-```
-
-🔹 **Stop a container:**
-
-```bash
-docker stop <container-id>
-```
-
-🔹 **Remove a container:**
-
-```bash
-docker rm <container-id>
-```
-
-🔹 **Remove an image:**
-
-```bash
-docker rmi my-simple-app
-```
-
-✅ You’ve containerized, deployed, and cleaned up a Dockerized app.
+✅ After deployment, access via DNS URL.
 
 ---
 
-✔️ **Lab complete – you have successfully created, containerized, and managed a Python web app using Docker.**
+### 8️⃣ Deploy Container Using ARM Template
+
+#### 🔹 `aci-deploy.json`
+
+```json
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "containerName": { "type": "string" },
+    "image": { "type": "string" },
+    "dnsLabel": { "type": "string" },
+    "location": { "type": "string", "defaultValue": "australiaeast" }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.ContainerInstance/containerGroups",
+      "apiVersion": "2021-07-01",
+      "name": "[parameters('containerName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "containers": [
+          {
+            "name": "[parameters('containerName')]",
+            "properties": {
+              "image": "[parameters('image')]",
+              "resources": {
+                "requests": {
+                  "cpu": 1,
+                  "memoryInGb": 1
+                }
+              },
+              "ports": [ { "port": 5000 } ]
+            }
+          }
+        ],
+        "osType": "Linux",
+        "ipAddress": {
+          "type": "Public",
+          "dnsNameLabel": "[parameters('dnsLabel')]",
+          "ports": [ { "protocol": "tcp", "port": 5000 } ]
+        }
+      }
+    }
+  ]
+}
+```
+
+#### 🔹 `aci-deploy.parameters.json`
+
+```json
+{
+  "parameters": {
+    "containerName": { "value": "flask-container" },
+    "image": { "value": "myacruniquename.azurecr.io/flask-simple-app:v1" },
+    "dnsLabel": { "value": "flask-demo-lab2d" },
+    "location": { "value": "australiaeast" }
+  }
+}
+```
+
+#### 🔹 CLI Deployment:
+
+```bash
+az deployment group create \
+  --resource-group lab2d-rg \
+  --template-file aci-deploy.json \
+  --parameters @aci-deploy.parameters.json
+```
+
+---
+
+## ✅ Lab Complete
+
+You’ve containerized a Python Flask app and deployed it to Azure Container Instances using Docker, Azure CLI, Portal, and ARM templates.
 

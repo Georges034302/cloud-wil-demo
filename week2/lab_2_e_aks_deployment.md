@@ -1,38 +1,39 @@
-# ☸️ Lab 2-E: Deploy a Containerized Application to AKS
+# ☸️ Lab 2-E: Deploy a Containerized Application to AKS using CLI, Portal, and ARM Template
 
 ## 🎯 Objective
 
-- Create an AKS cluster using Azure CLI
-- Push Docker image to Azure Container Registry (ACR)
-- Write Kubernetes deployment and service YAML files
-- Deploy the container to AKS using kubectl
-- Access the application via public IP
-- Monitor and manage pods
+- Build and push a Docker image to Azure Container Registry (ACR)
+- Deploy to Azure Kubernetes Service (AKS) using kubectl
+- Access the app via external LoadBalancer IP
+- Manage AKS workloads and deploy using ARM templates
 
 ---
 
 ## 🧰 Requirements
 
 - **Azure CLI** v2.38.0 or later
-- **Docker Desktop** installed and running
-- **kubectl** installed (or installed via `az aks install-cli`)
-- **Active Azure subscription** with:
-  - Permission to create resource groups, ACR, AKS
-  - Quota for 1 ACR and 1 AKS cluster (Basic tier)
+- **Docker Desktop** installed
+- **kubectl** installed (`az aks install-cli`)
+- **Active Azure subscription** with sufficient quota
 
 ---
 
 ## 👣 Lab Instructions
 
-### 1️⃣ Build the Docker Image (from Lab 2-D)
+### 1️⃣ Build the Docker Image
 
-Ensure you’ve built `my-simple-app` container using the instructions from **Lab 2-D**. This image will be pushed to ACR and deployed to AKS.
+From your Lab 2-D directory:
+
+```bash
+docker build -t my-simple-app .
+```
 
 ---
 
 ### 2️⃣ Create Azure Container Registry (ACR)
 
 ```bash
+az group create --name lab2e-rg --location australiaeast
 az acr create \
   --name lab2eacr12345 \
   --resource-group lab2e-rg \
@@ -40,7 +41,7 @@ az acr create \
   --location australiaeast
 ```
 
-✅ Use a **globally unique** name for the ACR (e.g., `lab2eacr12345`).
+✅ Ensure `lab2eacr12345` is globally unique.
 
 ---
 
@@ -49,22 +50,15 @@ az acr create \
 ```bash
 az acr login --name lab2eacr12345
 az acr show --name lab2eacr12345 --query loginServer --output tsv
-```
+# Assume login server is lab2eacr12345.azurecr.io
 
-📌 Example Output: `lab2eacr12345.azurecr.io`
-
-🔹 **Tag and Push:**
-
-```bash
 docker tag my-simple-app lab2eacr12345.azurecr.io/my-simple-app:v1
 docker push lab2eacr12345.azurecr.io/my-simple-app:v1
 ```
 
-✅ Your container image is now stored in ACR.
-
 ---
 
-### 4️⃣ Create an AKS Cluster
+### 4️⃣ Create AKS Cluster (CLI)
 
 ```bash
 az aks create \
@@ -76,7 +70,7 @@ az aks create \
   --attach-acr lab2eacr12345
 ```
 
-✅ `--attach-acr` grants the cluster access to pull images from ACR.
+✅ `--attach-acr` allows AKS to pull images from ACR.
 
 ---
 
@@ -87,13 +81,13 @@ az aks get-credentials --resource-group lab2e-rg --name lab2e-aks
 kubectl get nodes
 ```
 
-✅ You should see a node with status **Ready**.
+✅ Node should be **Ready**.
 
 ---
 
-### 6️⃣ Write Kubernetes YAML Files
+### 6️⃣ Create Kubernetes Deployment and Service YAML
 
-🔹 **deployment.yaml:**
+#### 🔹 `deployment.yaml`
 
 ```yaml
 apiVersion: apps/v1
@@ -117,7 +111,7 @@ spec:
         - containerPort: 5000
 ```
 
-🔹 **service.yaml:**
+#### 🔹 `service.yaml`
 
 ```yaml
 apiVersion: v1
@@ -129,36 +123,151 @@ spec:
   selector:
     app: simple-app
   ports:
-    - protocol: TCP
-      port: 80
-      targetPort: 5000
+  - protocol: TCP
+    port: 80
+    targetPort: 5000
 ```
 
 ---
 
-### 7️⃣ Deploy to AKS
+### 7️⃣ Deploy to AKS (kubectl)
 
 ```bash
 kubectl apply -f deployment.yaml
 kubectl apply -f service.yaml
 ```
 
-🔹 **Verify:**
+#### 🔹 Check status:
 
 ```bash
 kubectl get pods
 kubectl get services
 ```
 
-✅ Wait for the `EXTERNAL-IP` to be assigned (1–3 minutes).
+✅ Wait for `EXTERNAL-IP` to be assigned (1–3 min)
 
-🔹 **Test the app:** Open browser to:
-
-```
-http://<EXTERNAL-IP>
-```
+🔹 Access app: `http://<EXTERNAL-IP>`
 
 ---
 
-✔️ **Lab complete – you have built, pushed, and deployed a Dockerized application to AKS and accessed it via public IP!**
+### 8️⃣ Deploy to AKS via Azure Portal
+
+1. Go to [Azure Portal](https://portal.azure.com)
+2. Search → **Kubernetes services** → `lab2e-aks`
+3. Open → Click **Workloads** > **+ Add** > **Deployment**
+4. Input:
+   - Name: `simple-app`
+   - Container image: `lab2eacr12345.azurecr.io/my-simple-app:v1`
+   - Port: 5000
+   - Replicas: 1
+5. Click **Next** → Expose Service as LoadBalancer on Port 80
+6. Review + Create → Submit
+
+✅ Open **Services** tab to get the external IP.
+
+---
+
+### 9️⃣ AKS Deployment using ARM Template
+
+#### 🔹 `aks-deploy.json`
+
+```json
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "aksClusterName": { "type": "string" },
+    "location": { "type": "string" },
+    "acrId": { "type": "string" }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.ContainerService/managedClusters",
+      "apiVersion": "2023-01-01",
+      "name": "[parameters('aksClusterName')]",
+      "location": "[parameters('location')]",
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {
+        "dnsPrefix": "[parameters('aksClusterName')]",
+        "agentPoolProfiles": [
+          {
+            "name": "nodepool1",
+            "count": 1,
+            "vmSize": "Standard_DS2_v2",
+            "osType": "Linux",
+            "mode": "System",
+            "type": "VirtualMachineScaleSets"
+          }
+        ],
+        "enableRBAC": true,
+        "networkProfile": {
+          "networkPlugin": "azure",
+          "loadBalancerSku": "standard"
+        },
+        "addonProfiles": {
+          "omsagent": {
+            "enabled": true
+          }
+        },
+        "aadProfile": {
+          "managed": true
+        },
+        "servicePrincipalProfile": {
+          "clientId": "msi"
+        },
+        "apiServerAccessProfile": {
+          "enablePrivateCluster": false
+        }
+      },
+      "dependsOn": []
+    },
+    {
+      "type": "Microsoft.ContainerRegistry/registries/providers/roleAssignments",
+      "apiVersion": "2022-04-01-preview",
+      "name": "[format('{0}/Microsoft.Authorization/{1}', parameters('acrId'), guid(parameters('aksClusterName')))]",
+      "properties": {
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')]",
+        "principalId": "[reference(resourceId('Microsoft.ContainerService/managedClusters', parameters('aksClusterName')), '2023-01-01', 'Full').identity.principalId]",
+        "principalType": "ServicePrincipal"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.ContainerService/managedClusters', parameters('aksClusterName'))]"
+      ]
+    }
+  ]
+}
+```
+
+#### 🔹 `aks-deploy.parameters.json`
+
+```json
+{
+  "parameters": {
+    "aksClusterName": { "value": "lab2e-aks-arm" },
+    "location": { "value": "australiaeast" },
+    "acrId": {
+      "value": "/subscriptions/<subscription-id>/resourceGroups/lab2e-rg/providers/Microsoft.ContainerRegistry/registries/lab2eacr12345"
+    }
+  }
+}
+```
+
+#### 🔹 Deploy via CLI:
+
+```bash
+az deployment group create \
+  --resource-group lab2e-rg \
+  --template-file aks-deploy.json \
+  --parameters @aks-deploy.parameters.json
+```
+
+✅ This provisions the AKS cluster and grants it pull access to ACR.
+
+---
+
+## ✅ Lab Complete
+
+You have successfully built, pushed, and deployed a containerized app to Azure Kubernetes Service using Docker, CLI, Portal, and ARM templates.
 
