@@ -6,16 +6,17 @@
 - Define Azure App Service and Azure SQL Database using modular Bicep files
 - Transpile Bicep to ARM JSON templates
 - Use a parameters file for deployment customization
-- Deploy templates with Azure CLI and verify in the portal
+- Deploy templates using both Azure CLI and Azure Portal
+- Verify successful deployment in the Azure Portal
 
 ---
 
 ## 🧰 Requirements
 
 - Azure subscription with **Contributor** access
-- **Bicep CLI** installed (`bicep --version`)
-- **Azure CLI** installed
-- **Visual Studio Code** with **Bicep extension** (recommended)
+- **Azure CLI** installed (`az version`)
+- **Bicep CLI** installed (`az bicep install`)
+- **Visual Studio Code** with **Bicep extension**
 
 ---
 
@@ -23,47 +24,39 @@
 
 ### 1️⃣ Environment Setup
 
-🛠️ **Toolchain Setup:**
-- Open **VS Code** → Go to **Extensions** → Install `Bicep`
-- (Optional) Also install:
-  - Azure CLI Tools
-  - ARM Template Viewer
-  - Azure Resource Manager Snippets
-
-🖥️ **Open Terminal** (Ctrl + ~)
-
-✅ **Install Azure CLI:**  
-Follow [official guide](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli)  
-Check version:
-```bash
-az version
-```
-
-✅ **Install Bicep CLI:**
+🛠️ **Install Tools:**
+- Install **Azure CLI**: https://learn.microsoft.com/en-us/cli/azure/install-azure-cli
+- Install **Bicep CLI**:
 ```bash
 az bicep install
+```
+- Check installations:
+```bash
+az version
 bicep --version
 ```
+- Open **VS Code** → Install Bicep Extension
 
 ---
 
 ### 2️⃣ Create a Resource Group
 
-🔸 **CLI Command:**
+#### 🔹 Azure CLI:
 ```bash
 az group create --name lab2a-rg --location australiaeast
 ```
+
+#### 🔹 Azure Portal:
+1. Go to **Azure Portal** → **Resource groups**
+2. Click **+ Create**
+3. Name: `lab2a-rg`, Region: `Australia East`
+4. Click **Review + create** → **Create**
 
 ---
 
 ### 3️⃣ Assign IAM Role (Contributor)
 
-🔸 **CLI - Check Access:**
-```bash
-az role assignment list --assignee <your-user-email> --output table
-```
-
-🔸 **CLI - Assign Role:**
+#### 🔹 Azure CLI:
 ```bash
 az role assignment create \
   --assignee <your-user-email> \
@@ -71,83 +64,126 @@ az role assignment create \
   --scope /subscriptions/<subscription-id>/resourceGroups/lab2a-rg
 ```
 
-🔸 **Portal:**
-1. Go to **lab2a-rg** → **Access control (IAM)**
-2. Click **View my access**
-3. If missing, click **+ Add** → **Add role assignment**
-4. Role: **Contributor** → Assign access to: **User**
-5. Select yourself/student → **Review + assign**
-
-✅ You are now ready to define and deploy templates.
+#### 🔹 Azure Portal:
+1. Go to **Resource Groups** → `lab2a-rg`
+2. Click **Access Control (IAM)** → **+ Add** → **Add role assignment**
+3. Role: **Contributor** → Assign access to: **User** → Select your user
+4. Click **Review + assign**
 
 ---
 
 ### 4️⃣ Understand ARM Templates
 
-🔍 Explore structure of ARM templates and how Bicep simplifies them:
-- Visit: [ARM Samples Gallery](https://learn.microsoft.com/en-us/samples/browse/?expanded=azure&products=azure-resource-manager)
-- Focus: App Service + SQL Templates
-- Sections to observe: `parameters`, `variables`, `resources`, `outputs`
+Explore [ARM Samples Gallery](https://learn.microsoft.com/en-us/samples/browse/?expanded=azure&products=azure-resource-manager)
 
-📌 Bicep Benefits:
-- No deep nesting
-- No quotes
-- Easier reuse and readability
+📌 Key Sections in Templates:
+- `parameters`, `variables`, `resources`, `outputs`
 
-📝 **Reflection Prompt:** Why are ARM templates important for provisioning?
+📘 Bicep simplifies the same definitions:
+- No nested JSON
+- Reusable and more readable
+
+📝 Reflection: Why use declarative templates for provisioning?
 
 ---
 
-### 5️⃣ Define Resources in Bicep
+### 5️⃣ Define Resources Using Bicep
 
-🔹 **Create modular Bicep files:**
-- `web.bicep` → Define Web App
-- `sql.bicep` → Define SQL Database
+#### 🔹 `web.bicep` – App Service
+```bicep
+param webAppName string
+param location string
 
-🧠 Keep templates clean, modular, and param-driven.
+resource plan 'Microsoft.Web/serverfarms@2022-03-01' = {
+  name: '${webAppName}-plan'
+  location: location
+  sku: {
+    name: 'B1'
+    tier: 'Basic'
+  }
+  properties: {
+    reserved: false
+  }
+}
+
+resource webApp 'Microsoft.Web/sites@2022-03-01' = {
+  name: webAppName
+  location: location
+  properties: {
+    serverFarmId: plan.id
+  }
+}
+```
+
+#### 🔹 `sql.bicep` – SQL Server + Database
+```bicep
+param sqlServerName string
+param sqlAdmin string
+@secure()
+param sqlPassword string
+param location string
+
+resource sqlServer 'Microsoft.Sql/servers@2022-02-01-preview' = {
+  name: sqlServerName
+  location: location
+  properties: {
+    administratorLogin: sqlAdmin
+    administratorLoginPassword: sqlPassword
+  }
+}
+
+resource sqlDb 'Microsoft.Sql/servers/databases@2022-02-01-preview' = {
+  name: '${sqlServerName}/sampledb'
+  properties: {
+    collation: 'SQL_Latin1_General_CP1_CI_AS'
+    maxSizeBytes: 2147483648
+    sampleName: 'AdventureWorksLT'
+    sku: {
+      name: 'S0'
+      tier: 'Standard'
+    }
+  }
+}
+```
 
 ---
 
 ### 6️⃣ Transpile Bicep to ARM JSON
 
-🔹 **Commands:**
+#### 🔹 Azure CLI:
 ```bash
 bicep build web.bicep
 bicep build sql.bicep
 ```
-🔄 Output:
+✅ Generates:
 - `web.json`
 - `sql.json`
 
-📦 These are deployable ARM templates.
-
 ---
 
-### 7️⃣ Use a Parameters File
+### 7️⃣ Create Parameters File
 
-🧾 A `.json` file with `parameters` that match the Bicep param blocks.
-
-✅ **Why use it?**
-- Separates logic from config
-- Reusable across dev/test/prod
-- Keeps infrastructure consistent
-
-🔑 **Tips:**
-- Names must match the Bicep param blocks exactly
-- Quote all strings
-- Use `@secure()` for sensitive fields like `sqlPassword`
-- Use globally unique names (e.g., for Web App)
-
-📌 Use with deployment:
-```bash
---parameters @parameters.json
+#### 🔹 `parameters.json`:
+```json
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "parameters": {
+    "webAppName": { "value": "demo-webapp-unique" },
+    "location": { "value": "australiaeast" },
+    "sqlServerName": { "value": "demosqlserveruniq" },
+    "sqlAdmin": { "value": "adminuser" },
+    "sqlPassword": { "value": "YourP@ssw0rd123" }
+  }
+}
 ```
+
+✅ Ensure all parameter names match your `.bicep` files exactly.
 
 ---
 
 ### 8️⃣ Deploy Templates
 
-🔹 **Deploy with Azure CLI:** *(example shown – edit paths/names as needed)*
+#### 🔹 Azure CLI:
 ```bash
 az deployment group create \
   --resource-group lab2a-rg \
@@ -160,19 +196,57 @@ az deployment group create \
   --parameters @parameters.json
 ```
 
+#### 🔹 Azure Portal:
+1. Go to **Resource groups** → `lab2a-rg`
+2. Click **Deployments** → **+ Add** → **Template deployment**
+3. Select **Build your own template** → Paste in contents of `web.json`
+4. Click **Save** → Upload `parameters.json`
+5. Click **Review + create** → Repeat for `sql.json`
+
 ---
 
 ### 9️⃣ Verify in Azure Portal
 
-🔍 **Check:**
-- Navigate to **Resource groups** → `lab2a-rg`
-- Confirm:
-  - App Service Plan and Web App are deployed
-  - SQL Server and SQL Database are provisioned
-- Test Web App via URL
-- View **Deployments tab** → Activity logs
+✅ Navigate to `lab2a-rg`:
+- Confirm **App Service Plan** and **Web App** are deployed
+- Confirm **SQL Server** and **SQL Database** are available
+- Test Web App URL
+- View **Deployments** and **Activity logs**
 
 ---
 
-✅ **Lab complete – you’ve used Bicep and ARM to define, customize, and deploy Azure infrastructure!**
+## 📂 Recommended Folder Structure
+
+```
+lab-2a-bicep-deployment/
+├── web.bicep
+├── sql.bicep
+├── parameters.json
+├── web.json     # Transpiled
+├── sql.json     # Transpiled
+└── deploy.sh    # Optional automation script
+```
+
+#### 🔹 `deploy.sh` Script (Optional):
+```bash
+#!/bin/bash
+RG="lab2a-rg"
+PARAMS="parameters.json"
+
+az deployment group create \
+  --resource-group $RG \
+  --template-file web.json \
+  --parameters @$PARAMS
+
+az deployment group create \
+  --resource-group $RG \
+  --template-file sql.json \
+  --parameters @$PARAMS
+```
+
+---
+
+## ✅ Lab Complete
+
+You've defined, parameterized, transpiled, and deployed Azure infrastructure using Bicep, ARM templates, Azure CLI, and Portal. Well done!
 
