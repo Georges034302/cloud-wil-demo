@@ -5,8 +5,8 @@
 - Understand the purpose of Virtual Networks (VNets) in Azure
 - Create a VNet with multiple subnets
 - Configure address spaces and subnet boundaries
-- Deploy VNets using both Azure Portal and Azure CLI
-- Understand VNet integration with Azure services and network security features
+- Deploy VNets using Portal, CLI, and ARM templates
+- Validate the configuration with post-deployment verification
 
 ---
 
@@ -25,14 +25,13 @@
 
 #### 🔹 Azure Portal:
 
-1. Go to [Azure Portal](https://portal.azure.com)
-2. Search for **Resource groups** and click **+ Create**
-3. Fill in:
+1. Navigate to **Resource groups** → **+ Create**
+2. Fill in:
    - **Name**: `lab4c-rg`
    - **Region**: `Australia East`
-4. Click **Review + Create** → **Create**
+3. Click **Review + Create** → **Create**
 
-#### 🖥️ Azure CLI:
+#### 🔤 Azure CLI:
 
 ```bash
 az group create --name lab4c-rg --location australiaeast
@@ -46,26 +45,19 @@ az group create --name lab4c-rg --location australiaeast
 
 #### 🔹 Azure Portal:
 
-1. Search for **Virtual networks** → Click **+ Create**
-2. Under **Basics**:
+1. Go to **Virtual networks** → **+ Create**
+2. **Basics** tab:
    - **Resource group**: `lab4c-rg`
    - **Name**: `lab4c-vnet`
    - **Region**: `Australia East`
-3. Under **IP Addresses**:
-   - **IPv4 address space**: `10.1.0.0/16`
-   - **Add subnet 1**:
-     - **Name**: `web-subnet`
-     - **Address range**: `10.1.1.0/24`
-   - **Add subnet 2**:
-     - **Name**: `db-subnet`
-     - **Address range**: `10.1.2.0/24`
+3. **IP Addresses** tab:
+   - **Address space**: `10.1.0.0/16`
+   - **Subnets**:
+     - `web-subnet`: `10.1.1.0/24`
+     - `db-subnet`: `10.1.2.0/24`
 4. Click **Review + Create** → **Create**
 
-✅ You now have a VNet with two logically separate subnets.
-
-#### 🖥️ Azure CLI:
-
-Create the VNet with the first subnet:
+#### 🔤 Azure CLI:
 
 ```bash
 az network vnet create \
@@ -75,11 +67,7 @@ az network vnet create \
   --address-prefix 10.1.0.0/16 \
   --subnet-name web-subnet \
   --subnet-prefix 10.1.1.0/24
-```
 
-Add the second subnet:
-
-```bash
 az network vnet subnet create \
   --name db-subnet \
   --resource-group lab4c-rg \
@@ -87,21 +75,71 @@ az network vnet subnet create \
   --address-prefix 10.1.2.0/24
 ```
 
-✅ Both subnets created successfully.
+✅ VNet and subnets created.
 
 ---
 
-### 3️⃣ Verify the VNet and Subnets
+### 3️⃣ Deploy VNet with ARM Template
+
+#### `vnet-deployment.json`
+
+```json
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "apiVersion": "2023-02-01",
+      "name": "lab4c-vnet",
+      "location": "australiaeast",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": ["10.1.0.0/16"]
+        },
+        "subnets": [
+          {
+            "name": "web-subnet",
+            "properties": {
+              "addressPrefix": "10.1.1.0/24"
+            }
+          },
+          {
+            "name": "db-subnet",
+            "properties": {
+              "addressPrefix": "10.1.2.0/24"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
+```
+
+#### 🔤 Deploy via CLI:
+
+```bash
+az deployment group create \
+  --resource-group lab4c-rg \
+  --template-file vnet-deployment.json
+```
+
+✅ VNet and subnets deployed using ARM.
+
+---
+
+### 4️⃣ Validate VNet Configuration
 
 #### 🔹 Azure Portal:
 
 1. Go to **Virtual networks** → Select `lab4c-vnet`
-2. In the left pane, click **Subnets**
+2. Click **Subnets**
 3. Confirm:
-   - `web-subnet` (10.1.1.0/24)
-   - `db-subnet` (10.1.2.0/24)
+   - `web-subnet` → `10.1.1.0/24`
+   - `db-subnet` → `10.1.2.0/24`
 
-#### 🖥️ Azure CLI:
+#### 🔤 Azure CLI:
 
 ```bash
 az network vnet subnet list \
@@ -110,9 +148,11 @@ az network vnet subnet list \
   --output table
 ```
 
-✅ This confirms the configuration and address segmentation.
+✅ Lists subnet names and ranges for confirmation.
 
 ---
 
-✔️ **Lab complete – you successfully created a Virtual Network with two subnets and validated the setup using both the Portal and Azure CLI.**
+## ✅ Lab Complete
+
+You have successfully created an Azure Virtual Network with two subnets using the Portal, CLI, and ARM template. You also validated the deployment through both the Azure Portal and CLI.
 

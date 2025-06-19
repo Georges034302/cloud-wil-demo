@@ -1,39 +1,42 @@
 # ⚙️ Lab 5-C: Automate Deployment with GitHub Actions
 
-## 🎯 Objectives
+## 🌟 Objectives
 
 - Understand GitHub Actions for CI/CD
 - Build and deploy a web app to Azure App Service using GitHub Actions
 - Securely store publish profile credentials as secrets
 - Automate deployment on every push to `main` branch
 - Compare GitHub Actions with Azure DevOps Pipelines
+- Implement steps using Portal, CLI, and ARM (where applicable)
+- Validate GitHub Actions deployment
 
 ---
 
-## 🧰 Requirements
+## 🛠️ Requirements
 
 - GitHub account and local Git installed
-- Azure CLI and access to [Azure Portal](https://portal.azure.com)
+- Azure CLI installed and authenticated (`az login`)
+- Access to [Azure Portal](https://portal.azure.com)
 - Existing or new App Service (e.g., `gh-actions-demo-app`)
 
 ---
 
 ## 👣 Lab Instructions
 
-### 1️⃣ Create Azure App Service (If Not Already Created)
+### 1️⃣ Create Azure App Service (Portal, CLI, ARM)
 
-#### 🌐 Azure Portal:
+#### 🔢 Azure Portal:
 
 1. Go to Azure Portal → **Create a resource**
 2. Search: **Web App**
 3. Configure:
    - **Name**: `gh-actions-demo-app`
-   - **Runtime**: Node.js 18 LTS (or your preferred stack)
+   - **Runtime**: Node.js 18 LTS
    - **Region**: Australia East
    - **Resource Group**: `lab5-rg`
 4. Click **Review + Create** → **Create**
 
-#### 💻 Azure CLI:
+#### 📋 Azure CLI:
 
 ```bash
 az group create --name lab5-rg --location australiaeast
@@ -51,42 +54,85 @@ az webapp create \
   --runtime "NODE|18-lts"
 ```
 
-✅ Web App is ready for deployment.
+#### 🪡 ARM Template Snippet:
+
+```json
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2022-03-01",
+      "name": "ghactions-plan",
+      "location": "australiaeast",
+      "sku": {
+        "name": "F1",
+        "tier": "Free",
+        "capacity": 1
+      },
+      "properties": {
+        "reserved": true
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2022-03-01",
+      "name": "gh-actions-demo-app",
+      "location": "australiaeast",
+      "dependsOn": [
+        "Microsoft.Web/serverfarms/ghactions-plan"
+      ],
+      "properties": {
+        "serverFarmId": "ghactions-plan",
+        "siteConfig": {
+          "linuxFxVersion": "NODE|18-lts"
+        }
+      }
+    }
+  ]
+}
+```
+
+Deploy with:
+
+```bash
+az deployment group create \
+  --resource-group lab5-rg \
+  --template-file ghactions-appservice.json
+```
 
 ---
 
 ### 2️⃣ Get and Store the Publish Profile
 
-#### 🌐 Azure Portal:
+#### 🔢 Azure Portal:
 
 1. Go to **App Services** → `gh-actions-demo-app`
 2. Click **Deployment Center**
-3. Scroll to **Get publish profile** → Click to **Download**
-4. Open the downloaded `.PublishSettings` file
-5. Copy all contents
+3. Scroll to **Get publish profile** → Download
+4. Open `.PublishSettings` file
+5. Copy full content
 
-#### 🌐 GitHub:
+#### 👁️ GitHub Secrets:
 
 1. Go to your repo → **Settings** → **Secrets and variables** → **Actions**
 2. Click **New repository secret**
 3. Name: `AZURE_WEBAPP_PUBLISH_PROFILE`
-4. Value: Paste contents of the `.PublishSettings` file
-5. Click **Add secret**
-
-✅ Deployment credentials stored securely.
+4. Value: Paste the publish profile content
 
 ---
 
 ### 3️⃣ Add GitHub Actions Workflow
 
-#### 💻 Local Terminal:
+#### 📋 Create workflow file:
 
 ```bash
 mkdir -p .github/workflows
 nano .github/workflows/deploy.yml
 ```
 
-Paste this content:
+Paste:
 
 ```yaml
 name: Deploy Node App to Azure
@@ -123,54 +169,55 @@ jobs:
           package: .
 ```
 
-#### 💻 Commit and Push:
+Commit and push:
 
 ```bash
 git add .github/workflows/deploy.yml
-git commit -m "Add GitHub Actions deployment"
+git commit -m "Add GitHub Actions workflow"
 git push origin main
 ```
 
-✅ Workflow is now triggered on every push to `main`.
-
 ---
 
-### 4️⃣ Monitor Workflow Run
+### 4️⃣ Monitor Workflow
 
-#### 🌐 GitHub:
+#### 🔢 GitHub:
 
 1. Go to your repo → **Actions** tab
-2. Click the latest workflow run
-3. Review logs for:
-   - Code checkout
-   - Build
-   - Azure deployment
+2. Click the latest run
+3. Inspect logs: checkout, build, deploy
 
-✅ Confirm status: ✅ Success
+✅ Confirm workflow success.
 
 ---
 
-### 5️⃣ Confirm App Deployment
-
-Visit: `https://gh-actions-demo-app.azurewebsites.net`
-
-You should see the deployed app (e.g., your `index.html` content).
-
----
-
-### 6️⃣ (Optional) Test CI/CD Trigger
-
-1. Edit any file (e.g., `index.html`)
-2. Commit and push:
+### 5️⃣ Validate Deployed App
 
 ```bash
-git commit -am "Update home page"
+az webapp show \
+  --name gh-actions-demo-app \
+  --resource-group lab5-rg \
+  --query defaultHostName \
+  --output tsv
+```
+
+✅ Visit the resulting URL. App should load successfully.
+
+---
+
+### 6️⃣ Test CI/CD Trigger
+
+```bash
+echo "<h1>Updated!</h1>" >> index.html
+git commit -am "Test GitHub Actions"
 git push
 ```
 
-✅ This triggers another workflow and redeploys the app.
+✅ A new deployment should occur automatically.
 
 ---
 
-✔️ **Lab complete – GitHub Actions now builds and deploys your app automatically to Azure App Service on every code push.**
+## ✅ Lab Complete
+
+You implemented a GitHub Actions CI/CD pipeline with secure secret storage, automated Azure App Service deployment via Portal, CLI, and ARM, and verified end-to-end automation on `main` pushes.
 

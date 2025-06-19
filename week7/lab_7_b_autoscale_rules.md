@@ -1,16 +1,16 @@
 # ⚙️ Lab 7-B: Configure Autoscale Rules for App Service
 
-## 🎯 Objectives
+## 🌟 Objectives
 
 - Understand how Azure App Service supports automatic scaling
 - Create CPU-based autoscale rules for scaling out and in
 - Apply autoscale settings to an App Service Plan
 - Monitor autoscale conditions using Azure Monitor
-- Configure and validate autoscaling using both Portal and CLI
+- Configure and validate autoscaling using Portal, CLI, and ARM
 
 ---
 
-## 🧰 Requirements
+## 🛠️ Requirements
 
 - Azure CLI installed (`az login`)
 - A running App Service in a Standard or higher tier (e.g., `lab7app`)
@@ -28,7 +28,7 @@
 1. Go to Azure Portal
 2. Navigate to **App Services** → select your app
 3. Under **Settings**, click **Scale out (App Service plan)**
-4. Ensure that autoscale is supported and enabled (Standard tier or higher)
+4. Ensure autoscale is supported and enabled (Standard tier or higher)
 
 #### 💻 Azure CLI:
 
@@ -39,47 +39,46 @@ az appservice plan show \
   --query sku.tier
 ```
 
-✅ Output must be `Standard` or higher for autoscaling to work.
+✅ Output must be `Standard` or higher.
 
 ---
 
-### 2️⃣ Enable Autoscale and Add Rules (Portal)
+### 2️⃣ Configure Autoscale via Azure Portal
 
 1. Go to **App Service Plan** → **Scale out (App Service plan)**
 2. Toggle **Enable autoscale** to `On`
 3. Click **+ Add a rule**
 
-**Scale out rule:**
+**Scale-out rule:**
 
-- **Metric source**: App Service Plan
-- **Metric name**: CPU Percentage
-- **Operator**: Greater than
-- **Threshold**: 70
-- **Duration**: 5 minutes
-- **Action**: Increase count by 1
-- **Cooldown**: 5 minutes
+- Metric: `CPU Percentage`
+- Operator: `Greater than`
+- Threshold: `70`
+- Duration: `5 minutes`
+- Action: `Increase count by 1`
+- Cooldown: `5 minutes`
 
-**Scale in rule:**
+**Scale-in rule:**
 
-- **Metric name**: CPU Percentage
-- **Operator**: Less than
-- **Threshold**: 30
-- **Duration**: 5 minutes
-- **Action**: Decrease count by 1
+- Metric: `CPU Percentage`
+- Operator: `Less than`
+- Threshold: `30`
+- Duration: `5 minutes`
+- Action: `Decrease count by 1`
 
 **Instance limits:**
 
-- Minimum = 1
-- Maximum = 5
-- Default = 2
+- Minimum: 1
+- Maximum: 5
+- Default: 2
 
 4. Click **Save**
 
-✅ This sets up CPU-based autoscaling.
+✅ Autoscale is active.
 
 ---
 
-### 3️⃣ Enable Autoscale and Add Rules (CLI)
+### 3️⃣ Configure Autoscale via Azure CLI
 
 #### Create Autoscale Profile:
 
@@ -114,20 +113,93 @@ az monitor autoscale rule create \
   --scale in 1
 ```
 
-✅ Autoscale is now fully configured via CLI.
+✅ Autoscale is configured.
 
 ---
 
-### 4️⃣ Generate Load to Trigger Autoscale (Optional)
+### 4️⃣ Configure Autoscale via ARM Template
 
-To simulate load:
+Create `autoscale-settings.json`:
 
-- Deploy a CPU-intensive workload or stress endpoint
-- Use a public load testing service (e.g., loader.io)
-- Monitor activity in Azure Portal → **Metrics**
-- Wait 5–10 minutes to see autoscale trigger
+```json
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {},
+  "resources": [
+    {
+      "type": "Microsoft.Insights/autoscalesettings",
+      "apiVersion": "2015-04-01",
+      "name": "lab7-autoscale",
+      "location": "australiaeast",
+      "properties": {
+        "targetResourceUri": "/subscriptions/<sub-id>/resourceGroups/lab7-rg/providers/Microsoft.Web/serverfarms/Lab7Plan",
+        "enabled": true,
+        "profiles": [
+          {
+            "name": "AutoScaleProfile",
+            "capacity": {
+              "minimum": "1",
+              "maximum": "5",
+              "default": "2"
+            },
+            "rules": [
+              {
+                "metricTrigger": {
+                  "metricName": "Percentage CPU",
+                  "metricNamespace": "Microsoft.Web/serverfarms",
+                  "timeGrain": "PT1M",
+                  "statistic": "Average",
+                  "timeWindow": "PT5M",
+                  "timeAggregation": "Average",
+                  "operator": "GreaterThan",
+                  "threshold": 70,
+                  "dimensions": []
+                },
+                "scaleAction": {
+                  "direction": "Increase",
+                  "type": "ChangeCount",
+                  "value": "1",
+                  "cooldown": "PT5M"
+                }
+              },
+              {
+                "metricTrigger": {
+                  "metricName": "Percentage CPU",
+                  "metricNamespace": "Microsoft.Web/serverfarms",
+                  "timeGrain": "PT1M",
+                  "statistic": "Average",
+                  "timeWindow": "PT5M",
+                  "timeAggregation": "Average",
+                  "operator": "LessThan",
+                  "threshold": 30,
+                  "dimensions": []
+                },
+                "scaleAction": {
+                  "direction": "Decrease",
+                  "type": "ChangeCount",
+                  "value": "1",
+                  "cooldown": "PT5M"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
+```
 
-✅ Helps verify scale-out and scale-in actions.
+Deploy it:
+
+```bash
+az deployment group create \
+  --resource-group lab7-rg \
+  --template-file autoscale-settings.json
+```
+
+🔁 Replace `<sub-id>` with your subscription ID.
 
 ---
 
@@ -136,11 +208,11 @@ To simulate load:
 #### 🌐 Azure Portal:
 
 1. Go to **Monitor** → **Autoscale**
-2. Select your autoscale profile (e.g., `lab7-autoscale`)
+2. Select `lab7-autoscale`
 3. View:
-   - Autoscale evaluation results
-   - Trigger history
-   - Rule changes
+   - Evaluation results
+   - Triggered actions
+   - Rule history
 
 #### 💻 Azure CLI:
 
@@ -152,9 +224,11 @@ az monitor activity-log list \
   --output table
 ```
 
-✅ Observe autoscale actions triggered in real time.
+✅ Confirms autoscale actions were triggered.
 
 ---
 
-✔️ **Lab complete – you configured autoscale rules for Azure App Service using both Portal and CLI and validated them through monitoring.**
+## ✅ Lab Complete
+
+You successfully configured CPU-based autoscaling for Azure App Service using Azure Portal, CLI, and ARM templates, and monitored the activity to validate the results.
 

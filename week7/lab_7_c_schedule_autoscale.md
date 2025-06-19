@@ -1,16 +1,16 @@
 # 🗓️ Lab 7-C: Schedule-Based Autoscaling
 
-## 🎯 Objectives
+## 🌟 Objectives
 
 - Understand how scheduled scaling works as part of Azure autoscale
 - Configure time-based scaling rules for an App Service
 - Define different capacity targets for weekdays and weekends
-- Use Azure CLI and Portal to manage and monitor schedule profiles
+- Use Azure Portal, CLI, and ARM to manage and monitor schedule profiles
 - Optimize capacity during business hours and reduce costs during off-hours
 
 ---
 
-## 🧰 Requirements
+## 🛠️ Requirements
 
 - Azure CLI installed (`az login`)
 - App Service Plan (e.g., `Lab7Plan`) in Standard or higher tier
@@ -30,42 +30,44 @@
 
 ---
 
-### 2️⃣ Create a Business Hours Scaling Profile
+### 2️⃣ Create Business Hours Profile (Weekdays)
 
 1. Click **+ Add a scale condition** → Name: `BusinessHoursScaling`
 2. Under **Recurrence**, set:
-   - Time zone: Your local time zone
+   - Time zone: Your local time zone (e.g., `AUS Eastern Standard Time`)
    - Days: Monday to Friday
    - Start time: 08:00
    - End time: 18:00
-3. Under **Instance limits**:
+3. Instance limits:
    - Minimum: 3
    - Maximum: 5
    - Default: 3
-4. Click **Add** to save the profile
+4. Click **Add**
 
-✅ This ensures higher capacity during business hours.
+✅ Enables higher capacity during business hours.
 
 ---
 
-### 3️⃣ Create an Off-Hours Scaling Profile
+### 3️⃣ Create Off-Hours Profile (Nights & Weekends)
 
 1. Click **+ Add a scale condition** → Name: `OffHoursScaling`
-2. Schedule:
-   - Days: All days
-   - Start: 18:00
-   - End: 08:00 (next day)
+2. Recurrence:
+   - Days: Monday to Sunday
+   - Start time: 18:00
+   - End time: 08:00 (next day)
 3. Instance limits:
-   - Minimum / Maximum / Default = 1
-4. Click **Add** → then **Save** overall autoscale settings
+   - Minimum: 1
+   - Maximum: 1
+   - Default: 1
+4. Click **Add** → then **Save** the profile
 
-✅ Your app will now scale based on time of day and day of week.
+✅ Reduces resource usage outside of business hours.
 
 ---
 
-### 4️⃣ Schedule Autoscale Rules (Azure CLI)
+### 4️⃣ Schedule Autoscale Rules via CLI
 
-#### 🔹 Create or Update Autoscale Setting:
+#### Create Autoscale Setting:
 
 ```bash
 az monitor autoscale create \
@@ -77,7 +79,7 @@ az monitor autoscale create \
   --location australiaeast
 ```
 
-#### 🔹 Add Business Hours Profile:
+#### Add Business Hours Profile:
 
 ```bash
 az monitor autoscale profile create \
@@ -90,7 +92,7 @@ az monitor autoscale profile create \
   --min-count 3 --max-count 5 --count 3
 ```
 
-#### 🔹 Add Off-Hours Profile:
+#### Add Off-Hours Profile:
 
 ```bash
 az monitor autoscale profile create \
@@ -98,35 +100,114 @@ az monitor autoscale profile create \
   --autoscale-name lab7-scheduled-scale \
   --name OffHoursScaling \
   --timezone "AUS Eastern Standard Time" \
-  --recurrence frequency=Week \
+  --recurrence frequency=Week daysofweek=Sunday,Monday,Tuesday,Wednesday,Thursday,Friday,Saturday \
   --start 18:00 --end 08:00 \
   --min-count 1 --max-count 1 --count 1
 ```
 
-✅ CLI-based setup allows precise profile configuration.
+✅ CLI setup enables precise and repeatable schedules.
 
 ---
 
-### 5️⃣ Monitor Scheduled Autoscale Activity
+### 5️⃣ Schedule Autoscale via ARM Template
+
+Create `schedule-autoscale.json`:
+
+```json
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "type": "Microsoft.Insights/autoscalesettings",
+      "apiVersion": "2015-04-01",
+      "name": "lab7-scheduled-scale",
+      "location": "australiaeast",
+      "properties": {
+        "targetResourceUri": "/subscriptions/<sub-id>/resourceGroups/lab7-rg/providers/Microsoft.Web/serverfarms/Lab7Plan",
+        "enabled": true,
+        "profiles": [
+          {
+            "name": "BusinessHoursScaling",
+            "capacity": {
+              "minimum": "3",
+              "maximum": "5",
+              "default": "3"
+            },
+            "recurrence": {
+              "frequency": "Week",
+              "schedule": {
+                "timeZone": "AUS Eastern Standard Time",
+                "days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+                "hours": [8],
+                "minutes": [0]
+              }
+            },
+            "rules": []
+          },
+          {
+            "name": "OffHoursScaling",
+            "capacity": {
+              "minimum": "1",
+              "maximum": "1",
+              "default": "1"
+            },
+            "recurrence": {
+              "frequency": "Week",
+              "schedule": {
+                "timeZone": "AUS Eastern Standard Time",
+                "days": ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+                "hours": [18],
+                "minutes": [0]
+              }
+            },
+            "rules": []
+          }
+        ]
+      }
+    }
+  ]
+}
+```
+
+Then deploy:
+
+```bash
+az deployment group create \
+  --resource-group lab7-rg \
+  --template-file schedule-autoscale.json
+```
+
+🔄 Replace `<sub-id>` with your actual subscription ID.
+
+---
+
+### 6️⃣ Monitor Scheduled Autoscale Activity
 
 #### 🌐 Azure Portal:
 
 1. Go to **Monitor** → **Autoscale**
-2. Select **lab7-scheduled-scale**
-3. View **Run history** and confirm time-based scale actions
+2. Select `lab7-scheduled-scale`
+3. View:
+   - Run history
+   - Evaluation details
+   - Any triggered events
 
 #### 💻 Azure CLI:
 
 ```bash
 az monitor activity-log list \
   --resource-group lab7-rg \
+  --max-events 10 \
   --query "[?contains(operationName.value, 'Autoscale')].{Time:eventTimestamp, Operation:operationName.value, Status:status.value}" \
   --output table
 ```
 
-✅ Schedule-based scaling may take several minutes to activate.
+✅ Observe autoscale events over time.
 
 ---
 
-✔️ **Lab complete – you configured and monitored schedule-based autoscaling using both the Azure Portal and CLI.**
+## ✅ Lab Complete
+
+You successfully configured and monitored schedule-based autoscaling using Azure Portal, CLI, and ARM templates to optimize App Service Plan usage.
 

@@ -5,12 +5,12 @@
 - Understand the difference between scaling up/down (tiers) and out/in (instances)
 - Perform manual scaling actions on Azure App Service
 - Compare App Service Plan tiers and their scaling limits
-- Use Azure Portal and CLI to adjust web app capacity
+- Use Azure Portal, CLI, and ARM to adjust web app capacity
 - Recognize scenarios for manual scaling usage
 
 ---
 
-## 🧰 Requirements
+## 🛠️ Requirements
 
 - Azure subscription
 - Azure CLI installed (`az login`)
@@ -27,7 +27,7 @@
 
 1. Go to [Azure Portal](https://portal.azure.com)
 2. Navigate to **App Services** → Select your app (e.g., `lab7app`)
-3. In the **App Service plan** section, click the linked plan (e.g., `Lab7Plan`)
+3. Under **App Service plan**, click the linked plan (e.g., `Lab7Plan`)
 4. Review:
    - **Pricing tier**
    - **Number of instances**
@@ -49,7 +49,7 @@ az appservice plan show --name Lab7Plan --resource-group <resource-group>
 #### 🌐 Azure Portal:
 
 1. From App Service Plan view → Click **Scale out (App Service plan)**
-2. Increase **Instance count** to 2 or 3
+2. Increase **Instance count** to 2 or more
 3. Click **Save**
 
 ✅ Adds more worker instances for higher availability.
@@ -65,19 +65,50 @@ az appservice plan update \
 
 ✅ Your app is now running on 3 instances.
 
+#### 🧱 ARM Template:
+
+Create `scale-out.json`:
+
+```json
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {},
+  "resources": [
+    {
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2022-03-01",
+      "name": "Lab7Plan",
+      "location": "australiaeast",
+      "properties": {
+        "numberOfWorkers": 3
+      },
+      "sku": {
+        "name": "S1",
+        "tier": "Standard",
+        "capacity": 3
+      }
+    }
+  ]
+}
+```
+
+Deploy:
+
+```bash
+az deployment group create \
+  --resource-group <resource-group> \
+  --template-file scale-out.json
+```
+
 ---
 
 ### 3️⃣ Manually Scale Up (Change Pricing Tier)
-
-Scaling up means moving to a more powerful App Service Plan.
 
 #### 🌐 Azure Portal:
 
 1. From App Service Plan → Click **Scale up (App Service plan)**
 2. Choose a higher tier (e.g., `S2`)
-   - **F1**: Free (1 instance only)
-   - **B1-B3**: Basic (no autoscaling)
-   - **S1-S3**: Standard (multi-instance support)
 3. Click **Apply**
 
 ✅ Allocates more CPU, memory, and features.
@@ -91,7 +122,43 @@ az appservice plan update \
   --sku S2
 ```
 
-✅ Your app has been upgraded to a higher pricing tier.
+✅ App Service Plan upgraded.
+
+#### 🧱 ARM Template:
+
+Create `scale-up.json`:
+
+```json
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {},
+  "resources": [
+    {
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2022-03-01",
+      "name": "Lab7Plan",
+      "location": "australiaeast",
+      "sku": {
+        "name": "S2",
+        "tier": "Standard",
+        "capacity": 1
+      },
+      "properties": {
+        "reserved": true
+      }
+    }
+  ]
+}
+```
+
+Deploy:
+
+```bash
+az deployment group create \
+  --resource-group <resource-group> \
+  --template-file scale-up.json
+```
 
 ---
 
@@ -99,8 +166,8 @@ az appservice plan update \
 
 #### 🌐 Azure Portal:
 
-- Return to the App Service Plan overview
-- Verify new pricing tier and instance count
+- Return to **App Service Plan overview**
+- Verify pricing tier and instance count
 
 #### 💻 Azure CLI:
 
@@ -108,12 +175,15 @@ az appservice plan update \
 az appservice plan show \
   --name Lab7Plan \
   --resource-group <resource-group> \
-  --query "{Tier:sku.tier, Size:sku.name, Workers:maximumNumberOfWorkers}" --output table
+  --query "{Tier:sku.tier, Size:sku.name, Workers:maximumNumberOfWorkers}" \
+  --output table
 ```
 
-✅ Ensures your scale operations succeeded.
+✅ Scaling changes successfully applied.
 
 ---
 
-✔️ **Lab complete – you've manually scaled an Azure Web App by adjusting instance count and pricing tier using both the Portal and CLI.**
+## ✅ Lab Complete
+
+You manually scaled an Azure Web App by changing its pricing tier and instance count using Azure Portal, CLI, and ARM templates.
 

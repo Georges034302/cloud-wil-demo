@@ -6,17 +6,17 @@
 - Assign policies to enforce rules during deployments
 - Integrate policy enforcement in a CI/CD pipeline
 - Remediate existing resources to meet policy
-- Validate compliance using Azure CLI and Portal
+- Validate compliance using Azure CLI, Portal, and ARM
 
 ---
 
-## 🧰 Requirements
+## 🛠️ Requirements
 
 - Azure CLI installed (`az login`)
 - Azure Portal access
 - Resource group: `lab5-rg` with existing deployments
-- GitHub Actions or Azure DevOps pipeline
-- Familiarity with resource deployment or ARM templates
+- Optional: GitHub Actions or Azure DevOps pipeline
+- Familiarity with resource deployment and ARM templates
 
 ---
 
@@ -26,36 +26,41 @@
 
 #### 🌐 Azure Portal:
 
-1. Go to [Azure Portal](https://portal.azure.com)
-2. Search for **Policy** → Open **Azure Policy**
-3. In the left pane, click **Definitions**
-4. Filter **Type** = Built-in
+1. Navigate to [Azure Portal](https://portal.azure.com)
+2. Search and select **Policy**
+3. Go to **Definitions**
+4. Filter by **Type = Built-in**
 5. Review definitions like:
    - **Require a tag on resources**
    - **Allowed locations**
-   - **Audit resource SKU**
-6. Note the **Definition ID** for CLI use
+   - **Audit VMs without managed disks**
+
+📝 Note the **Definition ID** of any policy you want to use.
 
 ---
 
-### 2️⃣ Assign the "Require a Tag" Policy
+### 2️⃣ Assign "Require a tag on resources" Policy
 
 #### 🌐 Azure Portal:
 
-1. In Azure Policy, go to **Assignments** → Click **+ Assign Policy**
-2. Under **Basics**:
-   - **Scope**: Resource group `lab5-rg`
-   - **Policy Definition**: `Require a tag on resources`
-   - **Assignment Name**: `EnforceEnvironmentTag`
-3. Under **Parameters**:
-   - **Tag Name**: `environment`
-4. Click **Review + Create** → **Create**
+1. Go to **Policy → Assignments**
+2. Click **+ Assign Policy**
+3. **Scope**: Select `lab5-rg`
+4. **Policy definition**: Choose `Require a tag on resources`
+5. **Assignment name**: `EnforceEnvironmentTag`
+6. Under **Parameters**:
+   - **Tag name**: `environment`
+7. Click **Review + Create → Create**
 
-✅ Any deployment to `lab5-rg` now requires the tag `environment`.
+✅ Policy is now active on `lab5-rg`
 
 #### 💻 Azure CLI:
 
 ```bash
+# Get definition ID
+az policy definition list --query "[?displayName=='Require a tag on resources'].{Name:displayName, ID:policyDefinitionId}" -o table
+
+# Assign the policy
 az policy assignment create \
   --name EnforceEnvironmentTag \
   --policy <definition-id> \
@@ -63,13 +68,11 @@ az policy assignment create \
   --params '{"tagName": {"value": "environment"}}'
 ```
 
-✅ Policy applied using CLI.
+🔁 Replace `<definition-id>` with the exact ID from the query.
 
 ---
 
-### 3️⃣ Test the Policy in Deployment
-
-Try to deploy a resource (e.g., Storage Account) without the required tag:
+### 3️⃣ Deploy a Non-Compliant Resource (Expected Failure)
 
 ```bash
 az storage account create \
@@ -79,17 +82,11 @@ az storage account create \
   --sku Standard_LRS
 ```
 
-🚫 Error:
-
-```
-(ResourceNotAllowed) The deployment is disallowed by the policy assignment 'EnforceEnvironmentTag'.
-```
-
-✅ Confirms the policy is blocking non-compliant deployments.
+❌ Deployment will fail due to missing `environment` tag.
 
 ---
 
-### 4️⃣ Redeploy with the Required Tag
+### 4️⃣ Redeploy with Compliant Tag
 
 ```bash
 az storage account create \
@@ -100,36 +97,82 @@ az storage account create \
   --tags environment=dev
 ```
 
-✅ Policy-compliant deployment now succeeds.
+✅ Deployment succeeds.
 
 ---
 
-### 5️⃣ Integrate Policy Check in CI/CD
+### 5️⃣ Deploy Policy Assignment with ARM
 
-💡 In your CI/CD pipeline, add a pre-deployment step to validate compliance using CLI:
+Create `policy-assignment.json`:
 
-```bash
-az policy state list --resource-group lab5-rg --query "[?complianceState=='NonCompliant']"
+```json
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {},
+  "resources": [
+    {
+      "type": "Microsoft.Authorization/policyAssignments",
+      "apiVersion": "2021-06-01",
+      "name": "EnforceEnvironmentTag",
+      "properties": {
+        "policyDefinitionId": "/providers/Microsoft.Authorization/policyDefinitions/"  
+          "c2b0429a-7fc1-4471-9bd6-5ebc8198b5d0",
+        "scope": "/subscriptions/<subscription-id>/resourceGroups/lab5-rg",
+        "parameters": {
+          "tagName": { "value": "environment" }
+        }
+      }
+    }
+  ]
+}
 ```
 
-✅ Pipeline can conditionally block deployments if non-compliance is detected.
+```bash
+az deployment sub create \
+  --location australiaeast \
+  --template-file policy-assignment.json
+```
+
+🔁 Replace `<subscription-id>` with your actual ID.
 
 ---
 
-### 6️⃣ Remediate Existing Non-Compliant Resources
+### 6️⃣ Validate Compliance
+
+#### 💻 Azure CLI:
+
+```bash
+az policy state list \
+  --resource-group lab5-rg \
+  --query "[?complianceState=='NonCompliant']" -o table
+```
+
+#### 🌐 Azure Portal:
+
+1. Go to **Policy → Compliance**
+2. Select assignment `EnforceEnvironmentTag`
+3. View non-compliant resources and history
+
+✅ Use in CI/CD pipeline as a pre-check gate.
+
+---
+
+### 7️⃣ Remediate Non-Compliant Resources
 
 #### 🌐 Azure Portal:
 
 1. Go to **Azure Policy → Compliance**
-2. Select **EnforceEnvironmentTag** assignment
-3. Click **Create Remediation Task**
-4. Select affected resources (e.g., Storage Account)
-5. Provide tag value (e.g., `environment=dev`)
-6. Click **Remediate**
+2. Select `EnforceEnvironmentTag`
+3. Click **Create remediation task**
+4. Provide tag value: `environment=dev`
+5. Click **Remediate**
 
-✅ Azure will apply the required tag to bring resources into compliance.
+✅ Azure will attempt auto-remediation.
 
 ---
 
-✔️ **Lab complete – you integrated Azure Policy into your CI/CD process to enforce and remediate resource compliance programmatically.**
+## ✅ Lab Complete
+
+You assigned an Azure Policy using Portal, CLI, and ARM, tested enforcement, remediated violations, and validated compliance – integrating governance into your CI/CD process.
 

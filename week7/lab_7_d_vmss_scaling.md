@@ -1,16 +1,16 @@
 # 🖥️ Lab 7-D: Configure Scaling for Azure Virtual Machine Scale Sets (VMSS)
 
-## 🎯 Objectives
+## 🌟 Objectives
 
 - Understand how Azure VM Scale Sets (VMSS) provide elastic compute
 - Deploy a VMSS that auto-scales based on CPU utilization
 - Define autoscale rules to adjust VM instances
-- Use Azure Portal and CLI to configure scaling profiles
+- Use Azure Portal, CLI, and ARM to configure scaling profiles
 - Monitor VMSS activity and instance count
 
 ---
 
-## 🧰 Requirements
+## 🛠️ Requirements
 
 - Azure CLI installed (`az login`)
 - Resource group (e.g., `lab7-rg`)
@@ -110,14 +110,95 @@ az monitor autoscale rule create \
 
 ✅ CLI rules match Portal configuration for scale-out and scale-in.
 
+#### 📄 ARM Template (autoscale-vmss.json):
+
+```json
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "type": "Microsoft.Insights/autoscalesettings",
+      "apiVersion": "2015-04-01",
+      "name": "lab7-vmss-autoscale",
+      "location": "australiaeast",
+      "properties": {
+        "targetResourceUri": "/subscriptions/<sub-id>/resourceGroups/lab7-rg/providers/Microsoft.Compute/virtualMachineScaleSets/lab7-vmss",
+        "enabled": true,
+        "profiles": [
+          {
+            "name": "AutoScaleProfile",
+            "capacity": {
+              "minimum": "2",
+              "maximum": "5",
+              "default": "2"
+            },
+            "rules": [
+              {
+                "metricTrigger": {
+                  "metricName": "Percentage CPU",
+                  "metricNamespace": "Microsoft.Compute/virtualMachineScaleSets",
+                  "timeGrain": "PT1M",
+                  "statistic": "Average",
+                  "timeWindow": "PT5M",
+                  "timeAggregation": "Average",
+                  "operator": "GreaterThan",
+                  "threshold": 70,
+                  "dimensions": []
+                },
+                "scaleAction": {
+                  "direction": "Increase",
+                  "type": "ChangeCount",
+                  "value": "1",
+                  "cooldown": "PT5M"
+                }
+              },
+              {
+                "metricTrigger": {
+                  "metricName": "Percentage CPU",
+                  "metricNamespace": "Microsoft.Compute/virtualMachineScaleSets",
+                  "timeGrain": "PT1M",
+                  "statistic": "Average",
+                  "timeWindow": "PT5M",
+                  "timeAggregation": "Average",
+                  "operator": "LessThan",
+                  "threshold": 30,
+                  "dimensions": []
+                },
+                "scaleAction": {
+                  "direction": "Decrease",
+                  "type": "ChangeCount",
+                  "value": "1",
+                  "cooldown": "PT5M"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
+```
+
+📦 Deploy the template:
+
+```bash
+az deployment group create \
+  --resource-group lab7-rg \
+  --template-file autoscale-vmss.json
+```
+
+🔁 Replace `<sub-id>` with your Azure subscription ID.
+
 ---
 
 ### 3️⃣ Monitor VMSS Instances and Scaling History
 
 #### 🌐 Azure Portal:
 
-- Go to `lab7-vmss` → **Instances** to see running VMs
-- Under **Scaling**, view **Run history** for autoscale triggers
+- Go to `lab7-vmss` → **Instances** to view VMs
+- Navigate to **Scaling** → View **Run history** and triggers
 
 #### 💻 Azure CLI:
 
@@ -138,5 +219,7 @@ az monitor activity-log list \
 
 ---
 
-✔️ **Lab complete – you deployed a VMSS and configured CPU-based autoscaling using both Portal and CLI tools.**
+## ✅ Lab Complete
+
+You successfully deployed a VMSS and configured CPU-based autoscaling using Azure Portal, CLI, and ARM templates.
 

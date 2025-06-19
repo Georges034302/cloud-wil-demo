@@ -7,6 +7,8 @@
 - Create a build definition using YAML or Classic Designer
 - Deploy a sample application to Azure App Service
 - Automatically trigger the pipeline on code pushes
+- Implement steps using Portal, CLI, and ARM (where applicable)
+- Validate pipeline execution and deployment
 
 ---
 
@@ -24,7 +26,7 @@
 
 ### 1️⃣ Create an Azure App Service to Deploy To
 
-#### 🌐 Azure Portal:
+#### 🔹 Azure Portal:
 
 1. Go to [Azure Portal](https://portal.azure.com)
 2. Click **Create a resource** → Search: **Web App**
@@ -39,7 +41,7 @@
 
 ✅ App Service ready for deployment.
 
-#### 💻 Azure CLI:
+#### 📋 Azure CLI:
 
 ```bash
 az appservice plan create \
@@ -56,6 +58,54 @@ az webapp create \
 ```
 
 ✅ App Service created via CLI.
+
+#### 🪡 ARM Template Snippet:
+
+```json
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2022-03-01",
+      "name": "devops-plan",
+      "location": "australiaeast",
+      "sku": {
+        "name": "F1",
+        "tier": "Free",
+        "capacity": 1
+      },
+      "properties": {
+        "reserved": true
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2022-03-01",
+      "name": "devops-demo-app",
+      "location": "australiaeast",
+      "dependsOn": [
+        "Microsoft.Web/serverfarms/devops-plan"
+      ],
+      "properties": {
+        "serverFarmId": "devops-plan",
+        "siteConfig": {
+          "linuxFxVersion": "NODE|18-lts"
+        }
+      }
+    }
+  ]
+}
+```
+
+Deploy with:
+
+```bash
+az deployment group create \
+  --resource-group lab5-rg \
+  --template-file appservice-devops.json
+```
 
 ---
 
@@ -78,44 +128,69 @@ az webapp create \
 1. In Azure DevOps project, go to **Pipelines** → Click **Create Pipeline**
 2. Choose **GitHub** and authorize access
 3. Select your repo: `azure-cicd-sample`
-4. Select **Starter pipeline** or choose a template
-5. Replace YAML with your pipeline config
-6. Click **Save and run**
-7. Commit the YAML file to your GitHub repo
+4. Choose **Starter pipeline** or **YAML file from repo**
+5. Replace YAML content with:
 
-✅ The pipeline will now trigger and deploy your app.
+```yaml
+trigger:
+  - main
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+  - task: NodeTool@0
+    inputs:
+      versionSpec: '18.x'
+    displayName: 'Install Node.js'
+
+  - script: |
+      echo "Building app"
+      ls
+    displayName: 'Build Script'
+
+  - task: AzureWebApp@1
+    inputs:
+      azureSubscription: 'AzureCICDConnection'
+      appName: 'devops-demo-app'
+      package: '.'
+```
+
+6. Click **Save and run** → Commit to `main`
+
+✅ Pipeline will execute.
 
 ---
 
-### 4️⃣ Configure Service Connection to Azure
+### 4️⃣ Configure Azure Service Connection in DevOps
 
 1. In Azure DevOps → Go to **Project Settings** → **Service Connections**
 2. Click **+ New service connection** → Choose **Azure Resource Manager**
 3. Select **Service Principal (automatic)**
-4. Pick your subscription
+4. Pick your subscription and scope
 5. Name it: `AzureCICDConnection`
 6. Click **Verify and Save**
 
-✅ Now your pipeline can authenticate with Azure.
+✅ Pipeline has Azure access.
 
 ---
 
-### 5️⃣ View Pipeline Runs and Logs
+### 5️⃣ View Pipeline Execution & Logs
 
-1. In Azure DevOps → Go to **Pipelines → Runs**
-2. Click your latest run
-3. Expand logs:
-   - Node.js installation
-   - Build
-   - Deploy
+1. Azure DevOps → Pipelines → Runs
+2. Click latest run
+3. Review logs for:
+   - Node install
+   - App build
+   - Web App deploy
 
-✅ Confirm all steps passed (green check marks).
+✅ All steps should pass with green check marks.
 
 ---
 
-### 6️⃣ (Optional) Test Access to the Deployed App
+### 6️⃣ Post-Deployment Validation
 
-#### 💻 Azure CLI:
+#### 📋 Azure CLI:
 
 ```bash
 az webapp show \
@@ -125,9 +200,11 @@ az webapp show \
   --output tsv
 ```
 
-✅ Visit the output URL in your browser.
+✅ Visit the resulting URL to confirm app is running.
 
 ---
 
-✔️ **Lab complete – you created a CI/CD pipeline using Azure DevOps that deploys your web app from GitHub to Azure App Service.**
+## ✅ Lab Complete
+
+You successfully created a CI/CD pipeline using Azure DevOps, linked it with GitHub, configured Azure access, deployed an App Service using Portal, CLI, and ARM, and validated deployment via pipeline logs and app availability.
 

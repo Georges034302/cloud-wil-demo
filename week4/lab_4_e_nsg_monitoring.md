@@ -5,7 +5,8 @@
 - Enable Azure Network Watcher in your region
 - Monitor effective NSG rules applied to network interfaces
 - Analyze traffic flow using NSG flow logs
-- Use both Portal and CLI for monitoring tasks
+- Perform tasks using Portal, CLI, and ARM
+- Validate configuration post-deployment
 
 ---
 
@@ -14,8 +15,9 @@
 - Azure subscription
 - Azure CLI installed and logged in (`az login`)
 - Existing Resource Group: `lab4c-rg`
-- Existing VNet and NSG setup (from Lab 4-D)
-- Existing subnet with a VM or NIC for monitoring (e.g. `web-subnet`)
+- Existing NSG: `web-nsg`
+- Existing VNet and subnet with NIC (e.g., VM in `web-subnet`)
+- Existing storage account for log retention
 
 ---
 
@@ -25,10 +27,11 @@
 
 #### 🔹 Azure Portal:
 
-1. Search **Network Watcher** → Select your region (e.g. `Australia East`)
-2. Click **Enable Network Watcher** for that region if not already enabled
+1. Search for **Network Watcher**
+2. Select region `Australia East`
+3. Click **Enable Network Watcher** (if not already enabled)
 
-#### 🖥️ Azure CLI:
+#### 🔤 Azure CLI:
 
 ```bash
 az network watcher configure \
@@ -39,16 +42,36 @@ az network watcher configure \
 
 ✅ Network Watcher is now active.
 
+#### 🧱 ARM Template Snippet:
+
+```json
+{
+  "type": "Microsoft.Network/networkWatchers",
+  "apiVersion": "2022-07-01",
+  "name": "NetworkWatcher_australiaeast",
+  "location": "australiaeast",
+  "properties": {}
+}
+```
+
+Deploy with:
+
+```bash
+az deployment group create \
+  --resource-group lab4c-rg \
+  --template-file networkwatcher-deployment.json
+```
+
 ---
 
-### 2️⃣ List Effective NSG Rules on a NIC
+### 2️⃣ View Effective NSG Rules on a NIC
 
 #### 🔹 Azure Portal:
 
-1. Go to **Virtual machines** → Select your VM → **Networking**
-2. Click **Effective security rules** to see enforced NSG rules
+1. Go to **Virtual machines** → Select VM
+2. Click **Networking** → **Effective security rules**
 
-#### 🖥️ Azure CLI:
+#### 🔤 Azure CLI:
 
 ```bash
 az network watcher list-effective-nsg \
@@ -57,7 +80,7 @@ az network watcher list-effective-nsg \
   --output table
 ```
 
-✅ Replace `<nic-name>` with the NIC attached to the VM.
+✅ Replace `<nic-name>` with your VM's NIC name.
 
 ---
 
@@ -66,12 +89,13 @@ az network watcher list-effective-nsg \
 #### 🔹 Azure Portal:
 
 1. Go to **Network Watcher** → **NSG flow logs**
-2. Select the NSG (e.g. `web-nsg`) → Click **Configure**
-3. Choose a **Storage account** to store logs
-4. Set **Retention** to 7 days
-5. Click **Enable**
+2. Select `web-nsg` → Click **Configure**
+3. Set:
+   - **Storage account** for logs
+   - **Retention**: 7 days
+4. Click **Enable**
 
-#### 🖥️ Azure CLI:
+#### 🔤 Azure CLI:
 
 ```bash
 az network watcher flow-log configure \
@@ -83,13 +107,33 @@ az network watcher flow-log configure \
   --traffic-analytics false
 ```
 
-✅ Replace `<storage-name>` with an existing storage account name.
+✅ Replace `<storage-name>` with your actual storage account.
+
+#### 🧱 ARM Template Snippet:
+
+```json
+{
+  "type": "Microsoft.Network/networkWatchers/flowLogs",
+  "apiVersion": "2022-07-01",
+  "name": "NetworkWatcher_australiaeast/flowLog-web-nsg",
+  "location": "australiaeast",
+  "properties": {
+    "enabled": true,
+    "storageId": "/subscriptions/<SUBSCRIPTION_ID>/resourceGroups/lab4c-rg/providers/Microsoft.Storage/storageAccounts/<storage-name>",
+    "targetResourceId": "/subscriptions/<SUBSCRIPTION_ID>/resourceGroups/lab4c-rg/providers/Microsoft.Network/networkSecurityGroups/web-nsg",
+    "retentionPolicy": {
+      "days": 7,
+      "enabled": true
+    }
+  }
+}
+```
 
 ---
 
-### 4️⃣ Verify Flow Log Settings
+### 4️⃣ Validate Flow Log Configuration
 
-#### 🖥️ Azure CLI:
+#### 🔤 Azure CLI:
 
 ```bash
 az network watcher flow-log show \
@@ -97,9 +141,11 @@ az network watcher flow-log show \
   --nsg-name web-nsg
 ```
 
-✅ Returns status, storage details, retention period.
+✅ Confirms settings, retention, and storage location.
 
 ---
 
-✔️ **Lab complete – you monitored NSGs with Azure Network Watcher, verified effective rules on NICs, and enabled flow logs using both the Portal and CLI.**
+## ✅ Lab Complete
+
+You successfully enabled and configured Azure Network Watcher, verified NSG enforcement on NICs, and activated NSG flow logging using Portal, CLI, and ARM. You also validated the deployment to ensure proper logging and rule visibility.
 

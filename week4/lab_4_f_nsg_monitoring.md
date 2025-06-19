@@ -1,12 +1,12 @@
-# 📊 Lab 4-F: Use Azure Network Watcher for Diagnostics
+# 📊 Lab 4-F: Monitor Network Security Groups with Azure Network Watcher
 
 ## 🎯 Objective
 
-- Understand the role of Azure Network Watcher in monitoring and diagnostics
-- Enable Network Watcher in a region
-- Use connection troubleshooting tools like IP Flow Verify, Connection Troubleshoot, and NSG Diagnostics
-- Capture and view network traffic logs
-- Execute all diagnostics from both the Portal and Azure CLI
+- Enable Azure Network Watcher in your region
+- Monitor effective NSG rules applied to network interfaces
+- Analyze traffic flow using NSG flow logs
+- Perform tasks using Portal, CLI, and ARM
+- Validate configuration post-deployment
 
 ---
 
@@ -14,8 +14,10 @@
 
 - Azure subscription
 - Azure CLI installed and logged in (`az login`)
-- Existing VNet and NSG setup (e.g., from Lab 4-C and 4-D)
-- Deployed VM or subnet with NSG rules
+- Existing Resource Group: `lab4c-rg`
+- Existing NSG: `web-nsg`
+- Existing VNet and subnet with NIC (e.g., VM in `web-subnet`)
+- Existing storage account for log retention
 
 ---
 
@@ -26,10 +28,11 @@
 #### 🔹 Azure Portal:
 
 1. Go to [Azure Portal](https://portal.azure.com)
-2. Search for **Network Watcher** → Click **Regions**
-3. If `Australia East` is not enabled, click **Enable**
+2. Search for **Network Watcher**
+3. Select the region `Australia East`
+4. If disabled, click **Enable Network Watcher**
 
-#### 🖥️ Azure CLI:
+#### 🔤 Azure CLI:
 
 ```bash
 az network watcher configure \
@@ -38,93 +41,134 @@ az network watcher configure \
   --enabled true
 ```
 
-✅ Ensures Network Watcher tools are available in the selected region.
+✅ Network Watcher is now active.
 
----
+#### 🧱 ARM Template Snippet:
 
-### 2️⃣ Verify IP Flow (NSG Evaluation)
+```json
+{
+  "type": "Microsoft.Network/networkWatchers",
+  "apiVersion": "2022-07-01",
+  "name": "NetworkWatcher_australiaeast",
+  "location": "australiaeast",
+  "properties": {}
+}
+```
 
-#### 🔹 Azure Portal:
-
-1. Go to **Network Watcher** → Select **IP Flow Verify**
-2. Choose:
-   - **Subscription**, **Resource Group**, **VM name**
-   - **Direction**: Inbound
-   - **Protocol**: TCP
-   - **Local IP**: VM's private IP
-   - **Local Port**: 22 or 80
-   - **Remote IP**: any public IP (e.g. 8.8.8.8)
-   - **Remote Port**: * or 54321
-3. Click **Check**
-
-✅ View Allowed/Denied status and matching NSG rule.
-
-#### 🖥️ Azure CLI:
+Deploy with:
 
 ```bash
-az network watcher test-ip-flow \
+az deployment group create \
   --resource-group lab4c-rg \
-  --direction Inbound \
-  --protocol TCP \
-  --local <vm-private-ip> \
-  --local-port 22 \
-  --remote-ip 8.8.8.8 \
-  --remote-port 54321 \
-  --vm-name lab-vm
-```
-
-✅ Replace `<vm-private-ip>` with your actual VM IP using:
-```bash
-az vm list-ip-addresses --name lab-vm --output table
+  --template-file networkwatcher-deployment.json
 ```
 
 ---
 
-### 3️⃣ Run Connection Troubleshoot
+### 2️⃣ View Effective NSG Rules on a NIC
 
 #### 🔹 Azure Portal:
 
-1. Go to **Network Watcher** → Click **Connection Troubleshoot**
-2. Fill in:
-   - **Source VM**: lab-vm
-   - **Destination IP/FQDN**: www.microsoft.com
-   - **Destination Port**: 443
-3. Click **Check**
+1. Navigate to **Virtual Machines**
+2. Select your VM → Click **Networking**
+3. Click **Effective security rules** to view enforced NSG rules
 
-✅ Displays whether the connection is successful and where it may be blocked.
-
-#### 🖥️ Azure CLI:
-
-```bash
-az network watcher connection-monitor test \
-  --source-resource lab-vm \
-  --dest-address www.microsoft.com \
-  --dest-port 443
-```
-
-✅ Returns connection success/failure and path trace.
-
----
-
-### 4️⃣ Run NSG Diagnostics
-
-#### 🔹 Azure Portal:
-
-1. Go to **Network Watcher** → Select **NSG Diagnostics**
-2. Choose the NSG (e.g., `web-nsg`)
-3. Review rules and traffic impact
-
-#### 🖥️ Azure CLI:
+#### 🔤 Azure CLI:
 
 ```bash
 az network watcher list-effective-nsg \
   --resource-group lab4c-rg \
-  --network-interface <nic-name>
+  --network-interface <nic-name> \
+  --output table
 ```
 
-✅ Displays NSG rules applied to NIC or subnet.
+✅ Replace `<nic-name>` using:
+```bash
+az vm show \
+  --resource-group lab4c-rg \
+  --name <vm-name> \
+  --query 'networkProfile.networkInterfaces[0].id' \
+  --output tsv
+```
 
 ---
 
-✔️ **Lab complete – you enabled Network Watcher, ran IP Flow Verify, Connection Troubleshoot, and NSG Diagnostics using Azure Portal and CLI.**
+### 3️⃣ Enable NSG Flow Logs
+
+#### 🔹 Azure Portal:
+
+1. Go to **Network Watcher** → Click **NSG flow logs**
+2. Select `web-nsg` → Click **Configure**
+3. Set:
+   - **Storage account**: select existing one
+   - **Retention**: 7 days
+4. Click **Enable**
+
+#### 🔤 Azure CLI:
+
+```bash
+az network watcher flow-log configure \
+  --resource-group lab4c-rg \
+  --nsg-name web-nsg \
+  --enabled true \
+  --storage-account <storage-name> \
+  --retention 7 \
+  --traffic-analytics false
+```
+
+✅ Replace `<storage-name>` with your actual Storage Account name.
+
+#### 🧱 ARM Template Snippet:
+
+```json
+{
+  "type": "Microsoft.Network/networkWatchers/flowLogs",
+  "apiVersion": "2022-07-01",
+  "name": "NetworkWatcher_australiaeast/flowLog-web-nsg",
+  "location": "australiaeast",
+  "properties": {
+    "enabled": true,
+    "storageId": "/subscriptions/<SUBSCRIPTION_ID>/resourceGroups/lab4c-rg/providers/Microsoft.Storage/storageAccounts/<storage-name>",
+    "targetResourceId": "/subscriptions/<SUBSCRIPTION_ID>/resourceGroups/lab4c-rg/providers/Microsoft.Network/networkSecurityGroups/web-nsg",
+    "retentionPolicy": {
+      "days": 7,
+      "enabled": true
+    }
+  }
+}
+```
+
+Replace `<SUBSCRIPTION_ID>` and `<storage-name>` accordingly.
+
+---
+
+### 4️⃣ Validate Flow Log and Rule Configuration
+
+#### 🔤 Azure CLI:
+
+Check flow log status:
+
+```bash
+az network watcher flow-log show \
+  --resource-group lab4c-rg \
+  --nsg-name web-nsg \
+  --output jsonc
+```
+
+Verify logs in Storage Account:
+
+```bash
+az storage blob list \
+  --account-name <storage-name> \
+  --container-name insights-logs-networksecuritygroupflowevent \
+  --output table
+```
+
+✅ Confirms NSG log delivery and policy effectiveness.
+
+---
+
+## ✅ Lab Complete
+
+You successfully enabled Azure Network Watcher, validated effective NSG rules on a NIC, and activated and verified NSG flow logging using Portal, CLI, and ARM. Diagnostics and telemetry now support ongoing network security monitoring.
 

@@ -1,13 +1,14 @@
 # 🚀 Lab 5-A: Introduction to CI/CD with Azure
 
-## 🎯 Objectives
+## 🌟 Objectives
 
 - Understand the principles of Continuous Integration (CI) and Continuous Deployment (CD)
 - Explore CI/CD tools provided by Azure: GitHub Actions, Azure DevOps, Deployment Center
 - Set up a GitHub repository with a simple application
 - Create a resource group to manage CI/CD resources
 - Explore CI/CD options in Azure App Service Deployment Center
-- Prepare foundational components for Labs 5-B to 5-F
+- Deploy using Portal, CLI, and ARM
+- Validate App Service and GitHub integration post-deployment
 
 ---
 
@@ -46,7 +47,7 @@
    - ✅ Check **Initialize with a README.md**
 4. Click **Create repository**
 
-#### 💻 Local Terminal:
+#### 📋 Local Terminal:
 
 ```bash
 git clone https://github.com/<your-username>/azure-cicd-sample.git
@@ -63,7 +64,7 @@ git push origin main
 
 ### 3️⃣ Create a Resource Group for CI/CD Projects
 
-#### 💻 Azure CLI:
+#### 📋 Azure CLI:
 
 ```bash
 az group create --name lab5-rg --location australiaeast
@@ -73,57 +74,117 @@ az group create --name lab5-rg --location australiaeast
 
 ---
 
-### 4️⃣ Deploy App and Explore Deployment Center
+### 4️⃣ Deploy App Service (Portal, CLI, ARM)
 
-#### 🌐 Azure Portal:
+#### 🔢 Azure Portal:
 
-1. Go to [https://portal.azure.com](https://portal.azure.com)
-2. Search **App Services** → Click **+ Create**
-3. In the **Basics** tab:
-   - **Subscription**: Choose your active subscription
+1. Search **App Services** → Click **+ Create**
+2. Fill in:
    - **Resource Group**: `lab5-rg`
    - **Name**: `lab5app-<yourname>`
    - **Publish**: Code
-   - **Runtime stack**: Node.js 18 LTS (or your preference)
+   - **Runtime stack**: Node.js 18 LTS
    - **Region**: Australia East
-4. Click **Next → Deployment → Next → Review + Create → Create**
+3. Click **Review + Create** → **Create**
 
-✅ App Service deployed.
+#### 📋 Azure CLI:
 
-#### Explore Deployment Center:
+```bash
+az appservice plan create \
+  --name lab5-plan \
+  --resource-group lab5-rg \
+  --location australiaeast \
+  --sku B1
+
+az webapp create \
+  --resource-group lab5-rg \
+  --plan lab5-plan \
+  --name lab5app<yourname> \
+  --runtime "NODE|18-lts"
+```
+
+#### 🪡 ARM Template Snippet:
+
+```json
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2022-03-01",
+      "name": "lab5-plan",
+      "location": "australiaeast",
+      "sku": {
+        "name": "B1",
+        "tier": "Basic",
+        "capacity": 1
+      },
+      "properties": {}
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2022-03-01",
+      "name": "lab5app<yourname>",
+      "location": "australiaeast",
+      "dependsOn": [
+        "Microsoft.Web/serverfarms/lab5-plan"
+      ],
+      "properties": {
+        "serverFarmId": "lab5-plan",
+        "siteConfig": {
+          "linuxFxVersion": "NODE|18-lts"
+        }
+      }
+    }
+  ]
+}
+```
+
+Deploy with:
+
+```bash
+az deployment group create \
+  --resource-group lab5-rg \
+  --template-file lab5app-deploy.json
+```
+
+---
+
+### 5️⃣ Explore Deployment Center
+
+#### 🔢 Azure Portal:
 
 1. Go to your new **App Service**
-2. Click **Deployment Center** from the left menu
-3. Review available options:
+2. Select **Deployment Center** in the left menu
+3. Review CI/CD integration options:
    - GitHub
    - Azure Repos
    - Bitbucket
    - Local Git/ZIP
 
-🔁 Each option enables:
-
-- Automated builds on code push
-- Optional custom build steps
-- Continuous delivery to App Service
-
-✅ You’ve explored how App Service integrates with CI/CD workflows.
+✅ These enable automated builds and deployments.
 
 ---
 
-### 5️⃣ (Optional) Set Up Azure DevOps Organization
+### 6️⃣ Post-Deployment Validation
 
-1. Navigate to [https://dev.azure.com](https://dev.azure.com)
-2. Sign in with your Microsoft account
-3. Click **+ New Organization** (if needed)
-4. Choose a name like `AzureCICDOrg`
-5. Create a project:
-   - **Name**: `CI-CD-Demo`
-   - **Version control**: Git
-   - **Work item process**: Basic
+#### 🔢 Azure CLI:
 
-✅ Azure DevOps environment is now ready.
+```bash
+az webapp show \
+  --name lab5app<yourname> \
+  --resource-group lab5-rg \
+  --query "defaultHostName"
+```
+
+Visit: `https://<result>` in your browser ✅
+
+Confirm: App Service is accessible and serving content.
 
 ---
 
-✔️ **Lab complete – you’ve created a GitHub repo, deployed an App Service, and explored Azure-native CI/CD tools to support modern DevOps workflows.**
+## ✅ Lab Complete
+
+You successfully created a GitHub repo, deployed an App Service using Portal/CLI/ARM, explored Deployment Center, and validated post-deployment CI/CD readiness.
 

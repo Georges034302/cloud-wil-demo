@@ -4,7 +4,7 @@
 
 - Understand how RBAC secures access to Azure resources
 - Assign a built-in role (Reader) to a user or group
-- Use both Azure Portal and Azure CLI to manage role assignments
+- Use Azure Portal, CLI, and ARM templates to manage role assignments
 - Validate role assignment and scope
 - Practice least privilege access
 
@@ -14,7 +14,7 @@
 
 - Azure subscription with **Owner** or **User Access Administrator** role
 - An Entra ID (Azure AD) user or group (e.g., `labuser1` or `lab-users` from Lab 4-A)
-- Azure CLI installed and authenticated via `az login`
+- Azure CLI installed and authenticated (`az login`)
 - Access to [https://portal.azure.com](https://portal.azure.com)
 - Existing resource group (e.g., `lab4b-rg` or `lab3e-rg`)
 
@@ -22,86 +22,118 @@
 
 ## 👣 Lab Instructions
 
-### 1️⃣ Assign a Role to a User or Group
+### 1️⃣ Assign Reader Role
 
 #### 🔹 Azure Portal:
 
-1. Open [Azure Portal](https://portal.azure.com)
-2. Navigate to the target **Resource Group** (e.g., `lab4b-rg`)
-3. In the left pane, click **Access control (IAM)**
-4. Click **+ Add** → **Add role assignment**
-5. In the wizard:
-   - **Role**: Select `Reader` (can view but not change resources)
-   - **Assign access to**: Choose `User`, `Group`, or `Service principal`
-   - **Select**: Choose `labuser1` or `lab-users`
-6. Click **Review + assign**
+1. Go to the **Azure Portal** → Navigate to your **Resource Group** (e.g., `lab4b-rg`)
+2. Select **Access control (IAM)**
+3. Click **+ Add** → **Add role assignment**
+4. Set the following:
+   - **Role**: `Reader`
+   - **Assign access to**: `User`, `Group`, or `Service principal`
+   - **Select**: `labuser1` or `lab-users`
+5. Click **Review + assign**
 
-✅ This grants read-only access to the resource group.
+✅ Role is applied.
 
-#### 🖥️ Azure CLI:
+#### 🔤 Azure CLI:
 
 ```bash
-# Get subscription ID
 SUBSCRIPTION_ID=$(az account show --query id -o tsv)
 
-# Assign Reader role to the user or group
 az role assignment create \
   --assignee labuser1@<yourdomain> \
   --role Reader \
   --scope /subscriptions/$SUBSCRIPTION_ID/resourceGroups/lab4b-rg
 ```
 
-🧠 Replace `<yourdomain>` with your Azure AD domain. ✅ Role assigned successfully.
+✅ Replace `<yourdomain>` with your Azure AD domain.
 
 ---
 
-### 2️⃣ View Role Assignments and Scope
+### 2️⃣ Role Assignment Using ARM Template
+
+#### `rbac-assignment.json`
+
+```json
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "name": "[guid(resourceGroup().id, 'labuser1-reader')]",
+      "properties": {
+        "roleDefinitionId": "/subscriptions/<SUBSCRIPTION_ID>/providers/Microsoft.Authorization/roleDefinitions/acdd72a7-3385-48ef-bd42-f606fba81ae7",
+        "principalId": "<USER_OBJECT_ID>",
+        "scope": "/subscriptions/<SUBSCRIPTION_ID>/resourceGroups/lab4b-rg"
+      }
+    }
+  ]
+}
+```
+
+🛠 Replace:
+
+- `<SUBSCRIPTION_ID>` with your actual subscription ID
+- `<USER_OBJECT_ID>` with the object ID of `labuser1`
+
+#### Deploy via CLI:
+
+```bash
+az deployment group create \
+  --resource-group lab4b-rg \
+  --template-file rbac-assignment.json
+```
+
+✅ Automates Reader role assignment for the target user.
+
+---
+
+### 3️⃣ View and Validate Role Assignment
 
 #### 🔹 Azure Portal:
 
-1. Navigate to the **Resource Group** → **Access control (IAM)**
-2. Click **Role assignments** tab
-3. Filter by **User** or **Group**
-4. Click the entry to inspect:
-   - **Role name**
-   - **Scope**
-   - Whether it is directly assigned or inherited
+1. Go to the **Resource Group** → **Access control (IAM)** → **Role assignments**
+2. Filter by `User` or `Group` → Confirm `Reader` role for `labuser1` or `lab-users`
 
-#### 🖥️ Azure CLI:
+#### 🔤 Azure CLI:
 
 ```bash
 az role assignment list \
   --assignee labuser1@<yourdomain> \
+  --query "[].{Scope:scope, Role:roleDefinitionName}" \
   --output table
 ```
 
-✅ Lists all roles assigned to the user, including scope and role name.
+✅ Confirms scope and assigned role.
 
 ---
 
-### 3️⃣ Validate Access Using Access Check
+### 🔍 Post-Deployment Validation
 
-#### 🔹 Azure Portal:
+#### 🧪 Access Check in Portal:
 
-1. Navigate to the **Resource Group** → **Access control (IAM)**
-2. Click **Check access**
-3. Search and select `labuser1` or `lab-users`
-4. Click **View effective permissions**
+1. Open the **Resource Group** → **Access control (IAM)**
+2. Click **Check access** → Select `labuser1`
+3. Confirm Reader-level access appears as effective permissions
 
-✅ Portal will visually display effective access, including inherited permissions.
-
-#### 🖥️ Azure CLI:
+#### 🧪 Access Check via CLI:
 
 ```bash
 az role assignment list \
   --assignee labuser1@<yourdomain> \
-  --query "[].{Scope: scope, Role: roleDefinitionName}" \
+  --query "[?roleDefinitionName=='Reader'].[scope]" \
   --output table
 ```
 
-✅ Shows scoped access and confirms least privilege.
+✅ Verifies the user has the Reader role at the correct scope.
 
 ---
 
-✔️ **Lab complete – you successfully applied RBAC using the Reader role, verified access via portal and CLI, and practiced assigning least privilege permissions.**
+## ✅ Lab Complete
+
+You've successfully implemented Role-Based Access Control using Portal, CLI, and ARM. You've also validated the permissions and applied least privilege principles to secure resource access.
 

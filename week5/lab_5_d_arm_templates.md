@@ -1,21 +1,21 @@
 # 🧱 Lab 5-D: Define Infrastructure with ARM Templates
 
-## 🎯 Objectives
+## 🌟 Objectives
 
 - Understand the structure and purpose of ARM (Azure Resource Manager) templates
 - Define Azure infrastructure declaratively using JSON
-- Deploy resources using both Azure Portal and Azure CLI
-- Parameterize templates for reuse across environments
-- Validate and troubleshoot deployments using CLI and Portal output
+- Deploy resources using Portal, CLI, and ARM
+- Parameterize templates for reusability
+- Validate and troubleshoot deployments using outputs and logs
 
 ---
 
-## 🧰 Requirements
+## 🛠️ Requirements
 
 - Azure CLI installed and authenticated (`az login`)
-- Code editor (VS Code recommended)
-- Azure subscription
-- Resource group: `lab5-rg`
+- Access to [Azure Portal](https://portal.azure.com)
+- Code editor (e.g., VS Code)
+- Existing Resource Group: `lab5-rg`
 
 ---
 
@@ -23,19 +23,19 @@
 
 ### 1️⃣ Understand ARM Template Structure
 
-An ARM template is a declarative JSON file with the following sections:
+An ARM template is a JSON file with:
 
-- **\$schema**: URL for ARM schema definition
-- **contentVersion**: Template version
-- **parameters**: Dynamic input values (e.g., names)
-- **resources**: Azure resources to create
-- **outputs** *(optional)*: Values returned after deployment (e.g., IP, URLs)
+- `$schema`: ARM schema definition
+- `contentVersion`: Template version
+- `parameters`: Dynamic inputs
+- `resources`: Resources to provision
+- `outputs`: Return values (optional)
 
 ---
 
 ### 2️⃣ Create a Sample ARM Template
 
-Create a file named `azuredeploy.json` with the following contents:
+Save this as `azuredeploy.json`:
 
 ```json
 {
@@ -64,13 +64,11 @@ Create a file named `azuredeploy.json` with the following contents:
 }
 ```
 
-✅ This template creates a Storage Account using a parameterized name.
-
 ---
 
-### 3️⃣ (Optional) Create Parameters File
+### 3️⃣ (Optional) Create a Parameters File
 
-Create a file named `azuredeploy.parameters.json`:
+Save this as `azuredeploy.parameters.json`:
 
 ```json
 {
@@ -84,28 +82,24 @@ Create a file named `azuredeploy.parameters.json`:
 }
 ```
 
-✅ This allows flexible deployments by separating logic and values.
-
 ---
 
-### 4️⃣ Deploy Template Using Azure Portal
+### 4️⃣ Deploy Using Azure Portal
 
-1. Go to [Azure Portal](https://portal.azure.com)
+1. Visit [Azure Portal](https://portal.azure.com)
 2. Search for **Deploy a custom template**
 3. Click **Build your own template in the editor**
-4. Paste the contents of `azuredeploy.json`
-5. Click **Save**, then configure:
-   - **Resource Group**: `lab5-rg`
-   - **Storage Account Name**: `lab5storage1234`
-6. Click **Review + Create** → **Create**
+4. Paste `azuredeploy.json` contents
+5. Click **Save**
+6. Choose **Resource Group**: `lab5-rg`
+7. Set **storageAccountName** to `lab5storage1234`
+8. Click **Review + Create** → **Create**
 
-✅ Storage Account will be deployed based on the template.
+✅ Resource deployed via portal
 
 ---
 
-### 5️⃣ Deploy Template Using Azure CLI
-
-Run the following command from your working directory:
+### 5️⃣ Deploy Using Azure CLI
 
 ```bash
 az deployment group create \
@@ -114,13 +108,13 @@ az deployment group create \
   --parameters azuredeploy.parameters.json
 ```
 
-✅ Deployment output will show provisioning status and results.
+✅ CLI confirms provisioning status
 
 ---
 
-### 6️⃣ Verify the Deployment
+### 6️⃣ Validate the Deployment
 
-#### 💻 Azure CLI:
+#### 📃 Azure CLI:
 
 ```bash
 az resource list \
@@ -128,15 +122,17 @@ az resource list \
   --output table
 ```
 
-✅ Confirms the deployed storage account exists and matches parameters.
+✅ Should show `lab5storage1234`
 
 #### 🌐 Azure Portal:
 
 1. Go to **Resource groups** → `lab5-rg`
-2. Locate the Storage Account created
-3. Confirm name, region, and configuration
+2. Find the Storage Account
+3. Confirm name and configuration
 
 ---
 
-✔️ **Lab complete – you defined and deployed Azure infrastructure using ARM templates with reusability and validation in mind.**
+## ✅ Lab Complete
+
+You created a reusable ARM template, deployed it using Portal and CLI, and verified infrastructure using multiple tools.
 
