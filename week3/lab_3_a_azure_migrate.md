@@ -1,95 +1,166 @@
-# 🚀 Lab 3-A: Explore Azure Migrate
+# 🚀 Lab 3-A: Explore Azure Migrate with CLI, Portal, and ARM Template
 
 ## 🎯 Objective
 
 - Understand Azure Migrate’s purpose in cloud migration projects
-- Explore the Azure Migrate portal interface
-- Examine tools for migrating servers, databases, and web apps
-- Identify real-world migration scenarios and tools used
+- Explore Azure Migrate via Portal, CLI, and ARM
+- Review tools for migrating servers, databases, and web apps
+- Perform post-deployment validation
 
 ---
 
 ## 🧰 Requirements
 
-- **Microsoft Azure Account**
-- **Azure Free Subscription**
+- **Azure CLI** installed
+- **Azure Portal access**
+- **Free or Pay-As-You-Go subscription**
 
 ---
 
 ## 👣 Lab Instructions
 
-### 1️⃣ Access Azure Migrate in the Azure Portal
+### 1️⃣ Explore Azure Migrate via Azure Portal
 
 1. Go to [https://portal.azure.com](https://portal.azure.com)
-2. Sign in with your Azure student or institutional account
-3. In the search bar at the top, type **Azure Migrate** and select the service
-4. Click on **Azure Migrate – Unified migration platform** to launch it
-
-🧠 **Note:** Azure Migrate provides a unified dashboard for assessing and migrating on-premises resources (servers, databases, apps, VDIs).
-
----
-
-### 2️⃣ Understand the Migration Workflow and Interface
-
-Explore these areas on the Azure Migrate blade:
-- **Top-level tabs:** Servers, Databases, Web Apps, VDI
-- Hover over each tile under **Discover and Assess** and **Migrate**
-
-🧠 **Three-Phase Migration Model:**
-| Phase     | Description                                                                 |
-|-----------|-----------------------------------------------------------------------------|
-| Discover  | Connect to on-prem systems via agent or appliance                          |
-| Assess    | Analyze readiness, estimate costs, map dependencies                        |
-| Migrate   | Use guided tools to move workloads (with minimal downtime if possible)     |
-
----
-
-### 3️⃣ Start the “Create Migration Project” Wizard *(Simulation Only)*
-
-1. Click the **+ Create project** button
-2. In the panel:
+2. In the search bar, type **Azure Migrate** and open the unified portal
+3. Click **+ Create project**
+4. In the form:
    - **Project name:** `migrate-lab-project`
-   - **Geography:** Select `Australia East`
-   - **Resource group:** Click **Create new** → Name it `lab3a-rg`
+   - **Geography:** `Australia East`
+   - **Resource group:** Create new: `lab3a-rg`
+5. **DO NOT** click final **Create** → this is simulation only
 
-⚠️ **DO NOT** click the final **Create** button — this lab is exploratory only.
-
-🔒 Real projects allocate storage and may incur cost or need permissions.
-
----
-
-### 4️⃣ Explore Assessment and Migration Tools
-
-Navigate to the **Tools** section on the Azure Migrate homepage:
-
-- **Servers** → Review options for VMware, Hyper-V, physical servers
-- **Databases** → Explore **Data Migration Assistant (DMA)** and **Azure Database Migration Service**
-- **Web Apps** → Learn about the **App Service Migration Assistant**
-
-📘 **Reference Table:**
-| Migration Type | Tool                           | Description                                        |
-|----------------|--------------------------------|----------------------------------------------------|
-| Servers        | Azure Migrate Appliance       | Discovers and assesses physical/VM environments    |
-| Databases      | Azure Database Migration Svc  | Migrates SQL Server, MySQL, PostgreSQL             |
-| Web Apps       | App Service Migration Asst.   | Moves .NET, Java, PHP apps to Azure App Service    |
-| Virtual Desktops | Citrix, VMware Horizon       | 3rd-party VDI solutions supported by Azure Migrate |
+✅ Azure Migrate supports Servers, Databases, Web Apps, and VDI migration workflows.
 
 ---
 
-### 5️⃣ Identify a Real-World Migration Scenario
+### 2️⃣ Azure Migrate Project via CLI
 
-💬 **Discussion Task:**
-Answer the following questions:
+#### 🔹 Create Resource Group:
 
-1. What types of apps might a university or business migrate to Azure?
-2. Which Azure Migrate tools would you use for:
-   - A **SQL Server database**
-   - A **legacy ASP.NET web app**
-   - A **set of on-prem virtual machines**
+```bash
+az group create --name lab3a-rg --location australiaeast
+```
 
-✅ Share responses in class or submit via LMS.
+#### 🔹 Create Azure Migrate Project:
+
+```bash
+az migrate project create \
+  --resource-group lab3a-rg \
+  --location australiaeast \
+  --name migrate-lab-project
+```
+
+✅ This registers an Azure Migrate project in your subscription.
 
 ---
 
-✔️ **Lab complete – you’ve explored Azure Migrate, reviewed migration tools, and identified scenarios where it applies.**
+### 3️⃣ Azure Migrate via ARM Template
+
+#### 🔹 `azuremigrate-project.json`
+
+```json
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "projectName": { "type": "string" },
+    "location": { "type": "string" }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Migrate/projects",
+      "apiVersion": "2020-05-01",
+      "name": "[parameters('projectName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "projectStatus": "Active"
+      }
+    }
+  ]
+}
+```
+
+#### 🔹 `azuremigrate-project.parameters.json`
+
+```json
+{
+  "parameters": {
+    "projectName": { "value": "migrate-lab-project" },
+    "location": { "value": "australiaeast" }
+  }
+}
+```
+
+#### 🔹 Deploy via CLI:
+
+```bash
+az deployment group create \
+  --resource-group lab3a-rg \
+  --template-file azuremigrate-project.json \
+  --parameters @azuremigrate-project.parameters.json
+```
+
+✅ This provisions a functional Azure Migrate project.
+
+---
+
+### 4️⃣ Explore Assessment and Migration Tools (Portal)
+
+1. Go to **Azure Migrate** → Select your project → Review **Tiles**
+2. Click **Servers** tab → see migration options for Hyper-V, VMware, and physical servers
+3. Click **Databases** tab → see Data Migration Assistant & Azure DMS
+4. Click **Web Apps** → view App Service Migration Assistant
+
+---
+
+### 5️⃣ Real-World Migration Scenarios
+
+| Migration Type  | Tool                             |
+| --------------- | -------------------------------- |
+| On-prem VMs     | Azure Migrate Appliance          |
+| SQL Server      | Azure Database Migration Service |
+| Legacy Web Apps | App Service Migration Assistant  |
+
+---
+
+### 6️⃣ Post-Deployment Testing (Portal + CLI)
+
+#### ✅ Check Project Exists:
+
+```bash
+az migrate project show \
+  --resource-group lab3a-rg \
+  --name migrate-lab-project \
+  --query "name"
+```
+
+Expected Output:
+
+```
+"migrate-lab-project"
+```
+
+#### ✅ Confirm in Portal:
+
+1. Go to **Resource Group** → `lab3a-rg`
+2. You should see the Azure Migrate project
+3. Open it → Confirm tabs (Servers, Databases, Web Apps) are available
+
+#### ✅ Optional Query Project ID:
+
+```bash
+az migrate project show \
+  --resource-group lab3a-rg \
+  --name migrate-lab-project \
+  --query id
+```
+
+Use this in scripts or for programmatic operations.
+
+---
+
+## ✅ Lab Complete
+
+You’ve successfully explored Azure Migrate using Portal, CLI, and ARM Templates. You verified setup and explored real-world migration tools and scenarios.
 

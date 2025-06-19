@@ -1,43 +1,29 @@
-# 🛡️ Lab 3-D: Configure Microsoft Defender for Cloud
+# 🛡️ Lab 3-D: Configure Microsoft Defender for Cloud (CLI, Portal, ARM)
 
 ## 🎯 Objective
 
-- Understand the purpose of Microsoft Defender for Cloud (formerly Azure Security Center)
-- Enable Defender for Cloud on a subscription or resource group
-- Explore secure score, recommendations, compliance, and threat detection
+- Understand the purpose of Microsoft Defender for Cloud
+- Enable Defender for Cloud via Portal, CLI, and ARM
+- Explore Secure Score, Recommendations, and Compliance
 - Enable Defender plans for VMs, Storage, SQL, Kubernetes, and App Services
-- Use Azure CLI to configure Defender auto-provisioning and pricing tiers
+- Validate post-deployment configuration
 
 ---
 
 ## 🧰 Requirements
 
-- Active Azure Subscription (Owner or Contributor role)
-- Access to [https://portal.azure.com](https://portal.azure.com)
-- Azure CLI (v2.38.0+)
-- A resource group with one or more deployed resources (e.g., VM, Cosmos DB, AKS)
+- Azure Subscription (Owner/Contributor)
+- Azure CLI v2.38.0+
+- Access to [Azure Portal](https://portal.azure.com)
+- Existing resource group with resources (e.g., VM, SQL, AKS)
 
 ---
 
 ## 👣 Lab Instructions
 
-### 1️⃣ Enable Microsoft Defender for Cloud
+### 1️⃣ Enable Defender for Cloud
 
-#### 🔹 Azure Portal:
-
-1. Navigate to [Azure Portal](https://portal.azure.com)
-2. Search **Microsoft Defender for Cloud** in the top bar
-3. Click the result → **Enable** or **Get Started** if prompted
-4. Wait \~1–2 minutes for setup
-
-✅ Once active, you’ll see:
-
-- **Secure Score**
-- **Recommendations**
-- **Inventory**
-- **Regulatory Compliance**
-
-#### 🖥️ Azure CLI:
+#### 🔹 Azure CLI:
 
 ```bash
 az security auto-provisioning-setting update \
@@ -45,64 +31,153 @@ az security auto-provisioning-setting update \
   --auto-provision On
 ```
 
-✅ Enables automatic provisioning of monitoring agents for supported resources.
+#### 🚩 Azure Portal:
+
+1. Go to [Azure Portal](https://portal.azure.com)
+2. Search **Microsoft Defender for Cloud**
+3. Click **Get Started** or **Enable** if not already active
+4. Wait for provisioning (1–2 min)
+
+✅ Secure Score, Recommendations, and Inventory should now appear.
 
 ---
 
-### 2️⃣ Explore Secure Score and Recommendations
+### 2️⃣ Enable Defender Plans (per resource type)
 
-#### 🔹 Azure Portal:
-
-1. In the Defender for Cloud dashboard, click **Secure Score**
-2. Review the overall security posture
-3. Click **Recommendations**
-4. Filter by severity: High / Medium / Low
-5. Explore recommendations like:
-   - Unencrypted storage accounts
-   - Open management ports
-   - Missing OS patches
-
-✅ Clicking each item reveals remediation guidance.
-
-#### 🖥️ Azure CLI:
+#### 🔹 Azure CLI:
 
 ```bash
-az security task list
+az security pricing create --name VirtualMachines --tier Standard
+az security pricing create --name SqlServers --tier Standard
+az security pricing create --name AppServices --tier Standard
+az security pricing create --name KubernetesService --tier Standard
+az security pricing create --name StorageAccounts --tier Standard
 ```
 
-✅ Lists all pending security tasks and recommendations.
+#### 🚩 Azure Portal:
+
+1. Go to **Microsoft Defender for Cloud** → **Environment Settings**
+2. Select your Subscription → Click **Plans**
+3. Enable:
+   - Defender for VMs
+   - Defender for App Services
+   - Defender for SQL
+   - Defender for Kubernetes
+   - Defender for Storage
+4. Click **Save**
+
+✅ Plans activated and monitored.
 
 ---
 
-### 3️⃣ Enable Specific Defender Plans
+### 3️⃣ Explore Recommendations & Secure Score
 
-#### 🔹 Azure Portal:
-
-1. Go to **Environment settings** under Defender for Cloud
-2. Select your subscription
-3. Click **Plans**
-4. Enable:
-   - **Defender for App Services**
-   - **Defender for SQL**
-   - **Defender for Kubernetes**
-   - **Defender for Storage**
-5. Click **Save**
-
-✅ Defender protection plans activated.
-
-#### 🖥️ Azure CLI:
+#### 🔹 Azure CLI:
 
 ```bash
-az security pricing create \
-  --name VirtualMachines \
-  --tier Standard
+az security task list --output table
 ```
 
-✅ Enables Standard tier protection (billed) for VMs.
+#### 🚩 Azure Portal:
 
-📌 Repeat with other resource types as needed (e.g., `AppServices`, `StorageAccounts`, `SqlServers`).
+1. Go to **Microsoft Defender for Cloud**
+2. Click **Secure Score** → Review score
+3. Go to **Recommendations** → Filter by High / Medium / Low
+
+✅ Recommendations and guidance appear for unprotected/misconfigured resources.
 
 ---
 
-✔️ **Lab complete – you enabled Microsoft Defender for Cloud, reviewed secure score and recommendations, and applied threat protection to your key Azure services.**
+### 4️⃣ ARM Template Deployment
+
+#### 🔹 `defender-deploy.json`
+
+```json
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "type": "Microsoft.Security/pricings",
+      "apiVersion": "2022-01-01-preview",
+      "name": "VirtualMachines",
+      "properties": {
+        "pricingTier": "Standard"
+      }
+    },
+    {
+      "type": "Microsoft.Security/pricings",
+      "apiVersion": "2022-01-01-preview",
+      "name": "SqlServers",
+      "properties": {
+        "pricingTier": "Standard"
+      }
+    },
+    {
+      "type": "Microsoft.Security/pricings",
+      "apiVersion": "2022-01-01-preview",
+      "name": "AppServices",
+      "properties": {
+        "pricingTier": "Standard"
+      }
+    },
+    {
+      "type": "Microsoft.Security/pricings",
+      "apiVersion": "2022-01-01-preview",
+      "name": "KubernetesService",
+      "properties": {
+        "pricingTier": "Standard"
+      }
+    },
+    {
+      "type": "Microsoft.Security/pricings",
+      "apiVersion": "2022-01-01-preview",
+      "name": "StorageAccounts",
+      "properties": {
+        "pricingTier": "Standard"
+      }
+    }
+  ]
+}
+```
+
+#### 🔹 Deploy via CLI:
+
+```bash
+az deployment sub create \
+  --location australiaeast \
+  --template-file defender-deploy.json
+```
+
+✅ Enables all Defender plans at the subscription level.
+
+---
+
+### 5️⃣ Post-Deployment Validation
+
+#### ✅ CLI Validation:
+
+```bash
+az security pricing list --output table
+az security task list --output table
+```
+
+Look for:
+
+- **Pricing tier = Standard**
+- Tasks showing security recommendations
+
+#### ✅ Portal Validation:
+
+1. Go to **Defender for Cloud** → Secure Score & Recommendations
+2. Click into any active alerts or tasks
+3. Ensure that pricing tier = **Standard** for protected services
+
+✅ Defender successfully configured and monitoring.
+
+---
+
+## ✅ Lab Complete
+
+You have enabled Microsoft Defender for Cloud via CLI, Portal, and ARM; explored secure score and recommendations; and activated monitoring for VMs, SQL, Kubernetes, and more.
 

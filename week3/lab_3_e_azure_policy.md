@@ -1,102 +1,136 @@
-# 📜 Lab 3-E: Create and Assign Azure Policies
+# 📜 Lab 3-E: Create and Assign Azure Policies (CLI, Portal, ARM)
 
 ## 🎯 Objective
 
 - Understand the purpose of Azure Policy in enforcing governance
-- Create a built-in or custom policy definition
-- Assign a policy to a resource group
-- Validate policy compliance using the Azure Portal and CLI
-- Learn how Azure Policy helps with security, cost control, and standardization
+- Create built-in/custom policy definitions
+- Assign a policy using Portal, CLI, and ARM
+- Validate compliance and behavior
 
 ---
 
 ## 🧰 Requirements
 
-- Active Azure subscription (Owner or Contributor role)
-- Access to [https://portal.azure.com](https://portal.azure.com)
-- Azure CLI installed and logged in (`az login`)
-- An existing resource group (e.g., `lab3e-rg`)
+- Azure subscription (Owner/Contributor role)
+- Azure CLI (v2.38.0+)
+- Access to [Azure Portal](https://portal.azure.com)
+- Resource group (e.g., `lab3e-rg`)
 
 ---
 
 ## 👣 Lab Instructions
 
-### 1️⃣ Create a Built-In Policy Assignment
+### 1️⃣ Create Resource Group
 
-#### 🔹 Azure Portal:
-
-1. Go to [Azure Portal](https://portal.azure.com)
-2. Search for **Policy** → Open **Azure Policy** blade
-3. In the left menu, click **Definitions**
-4. Filter by **Built-in** and search for `Allowed locations`
-5. Click the **Allowed locations** policy
-6. Click **+ Assign**
-7. Fill in:
-   - **Scope**: Select your resource group (e.g., `lab3e-rg`)
-   - **Assignment Name**: `RestrictLocations`
-   - **Parameters**: Select `Australia East` as the only allowed region
-8. Click **Review + Create** → **Create**
-
-✅ Now, any new resources created **outside Australia East** will be denied.
+```bash
+az group create --name lab3e-rg --location australiaeast
+```
 
 ---
 
-### 2️⃣ Assign the Same Policy Using Azure CLI
+### 2️⃣ Assign Built-In Policy: Allowed Locations
 
-#### 🖥️ Azure CLI:
+#### 🔹 Azure Portal:
 
-Fetch your subscription ID:
+1. Open **Azure Policy** from the Portal
+2. Go to **Definitions** → Filter: **Built-in** → Search: `Allowed locations`
+3. Click policy → **+ Assign**
+4. Scope: Select `lab3e-rg`
+5. Name: `RestrictLocations` → Parameter: `Australia East`
+6. Review + Create → Confirm
+
+#### 🔹 Azure CLI:
+
+Get policy definition ID:
 
 ```bash
-az account show --query id --output tsv
+az policy definition list --query "[?displayName=='Allowed locations'].{id:id}" -o tsv
 ```
 
-Assign the policy:
+Assign policy:
 
 ```bash
 az policy assignment create \
   --name RestrictLocations \
   --display-name "Restrict resources to Australia East" \
-  --policy "/providers/Microsoft.Authorization/policyDefinitions/LOCATION_POLICY_ID" \
+  --policy <POLICY_ID_FROM_ABOVE> \
   --params '{"listOfAllowedLocations": {"value": ["australiaeast"]}}' \
-  --scope "/subscriptions/<subscription-id>/resourceGroups/lab3e-rg"
+  --scope "/subscriptions/<SUBSCRIPTION_ID>/resourceGroups/lab3e-rg"
 ```
 
-🧠 Replace `LOCATION_POLICY_ID` with the actual policy ID for **Allowed locations**. ✅ Policy is now active on the scope.
+---
+
+### 3️⃣ Assign via ARM Template
+
+#### 🔹 `policy-assignment.json`
+
+```json
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "type": "Microsoft.Authorization/policyAssignments",
+      "apiVersion": "2021-06-01",
+      "name": "RestrictLocations",
+      "properties": {
+        "displayName": "Restrict resources to Australia East",
+        "policyDefinitionId": "/providers/Microsoft.Authorization/policyDefinitions/<POLICY_ID>",
+        "parameters": {
+          "listOfAllowedLocations": {
+            "value": ["australiaeast"]
+          }
+        },
+        "scope": "/subscriptions/<SUBSCRIPTION_ID>/resourceGroups/lab3e-rg"
+      }
+    }
+  ]
+}
+```
+
+#### 🔹 Deploy:
+
+```bash
+az deployment sub create \
+  --location australiaeast \
+  --template-file policy-assignment.json
+```
 
 ---
 
-### 3️⃣ Test the Policy Enforcement
+### 4️⃣ Test Policy Enforcement
 
-Try deploying a resource outside the allowed region (e.g., West US):
+Try creating a Storage Account in `westus`:
 
-- **Portal or CLI:** Create a Storage Account in `westus`
-- ❌ The operation should **fail** due to policy restriction
+```bash
+az storage account create \
+  --name lab3einvalidsa \
+  --resource-group lab3e-rg \
+  --location westus \
+  --sku Standard_LRS
+```
 
-✅ This confirms your policy works.
+❌ It should fail with a policy error.
 
 ---
 
-### 4️⃣ View Compliance State
+### 5️⃣ View Compliance Results
 
 #### 🔹 Azure Portal:
 
-1. Go to **Azure Policy** → **Compliance**
-2. Locate your policy assignment: `RestrictLocations`
-3. Click it to view:
-   - **Evaluation result**: Compliant / Non-compliant
-   - **Affected resources**
+- Go to **Azure Policy** → **Compliance**
+- Locate `RestrictLocations` → Review non-compliant resources
 
-#### 🖥️ Azure CLI:
+#### 🔹 Azure CLI:
 
 ```bash
 az policy state list \
   --query "[?policyAssignmentName=='RestrictLocations']"
 ```
 
-✅ CLI view of evaluation and compliance.
-
 ---
 
-✔️ **Lab complete – you successfully assigned an Azure Policy, enforced a governance rule, and verified compliance using both Portal and CLI.**
+## ✅ Lab Complete
+
+You created and assigned a governance policy using Portal, CLI, and ARM; enforced location rules; and validated policy behavior using test resources and compliance insights.
 

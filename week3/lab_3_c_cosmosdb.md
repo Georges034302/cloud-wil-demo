@@ -1,61 +1,44 @@
-# 🌍 Lab 3-C: Provision and Explore Azure Cosmos DB
+# 🌍 Lab 3-C: Provision and Explore Azure Cosmos DB (CLI, Portal, ARM)
 
-## 🎯 Objective
+## 🌟 Objective
 
-- Understand Azure Cosmos DB and its supported workloads
-- Create a Cosmos DB account using Portal and CLI
-- Create a database and container
-- Insert and query JSON documents
-- Explore indexing, throughput, and scaling
+- Understand Azure Cosmos DB workloads
+- Deploy Cosmos DB via CLI, Portal, and ARM
+- Create a SQL API database and container
+- Insert/query JSON documents
+- Explore throughput, indexing, and replication
 
 ---
 
 ## 🧰 Requirements
 
-- Active Azure subscription
-- Access to [https://portal.azure.com](https://portal.azure.com)
-- Azure CLI v2.38.0 or higher
+- Azure Subscription (Free or Pay-As-You-Go)
+- **Azure CLI** v2.38.0+
+- **Access to Azure Portal**
 
 ---
 
 ## 👣 Lab Instructions
 
-### 1️⃣ Create a Resource Group
+### 1️⃣ Create Resource Group
 
-#### 🔹 Azure Portal:
-
-1. Go to [Azure Portal](https://portal.azure.com) → Search for **Resource groups**
-2. Click **+ Create**
-3. Fill in:
-   - Resource group: `lab3c-rg`
-   - Region: `Australia East`
-4. Click **Review + Create** → **Create**
-
-#### 🖥️ Azure CLI:
+#### 🔹 Azure CLI:
 
 ```bash
 az group create --name lab3c-rg --location australiaeast
 ```
 
-✅ Resource group ready.
+#### 🚩 Azure Portal:
+
+1. Go to [Azure Portal](https://portal.azure.com) → Search **Resource groups**
+2. Click **+ Create**
+3. Fill: `lab3c-rg`, Region: `Australia East` → Review + Create → Create
 
 ---
 
-### 2️⃣ Create a Cosmos DB Account (SQL API)
+### 2️⃣ Create Cosmos DB Account (SQL API)
 
-#### 🔹 Azure Portal:
-
-1. Search for **Azure Cosmos DB** → Click **+ Create**
-2. Select **Core (SQL)**
-3. Fill in:
-   - Resource Group: `lab3c-rg`
-   - Account name: `lab3c-cosmos-<unique>` (lowercase + globally unique)
-   - Region: `Australia East`
-   - Capacity mode: Provisioned throughput
-   - Apply free tier: ✅ if available
-4. Click **Review + Create** → **Create**
-
-#### 🖥️ Azure CLI:
+#### 🔹 Azure CLI:
 
 ```bash
 az cosmosdb create \
@@ -67,32 +50,26 @@ az cosmosdb create \
   --enable-free-tier true
 ```
 
-✅ Cosmos DB account created.
+#### 🚩 Azure Portal:
+
+1. Search **Azure Cosmos DB** → **+ Create**
+2. Choose **Core (SQL)** API
+3. Resource Group: `lab3c-rg`, Account name: `lab3c-cosmos-<unique>`
+4. Region: `Australia East`, Free Tier: Enabled (if eligible)
+5. Review + Create → Create
 
 ---
 
 ### 3️⃣ Create Database and Container
 
-#### 🔹 Azure Portal:
-
-1. Go to Cosmos DB account → **Data Explorer** → **New Container**
-2. Fill in:
-   - Database ID: `lab3c-db`
-   - Container ID: `lab3c-container`
-   - Partition Key: `/id`
-   - Throughput: 400 RU/s (default)
-3. Click **OK**
-
-#### 🖥️ Azure CLI:
+#### 🔹 Azure CLI:
 
 ```bash
-# Create DB
 az cosmosdb sql database create \
   --account-name lab3ccosmoscli \
   --name lab3c-db \
   --resource-group lab3c-rg
 
-# Create container
 az cosmosdb sql container create \
   --account-name lab3ccosmoscli \
   --database-name lab3c-db \
@@ -101,17 +78,25 @@ az cosmosdb sql container create \
   --throughput 400
 ```
 
-✅ Database and container provisioned.
+#### 🚩 Azure Portal:
+
+1. Go to Cosmos DB → **Data Explorer**
+2. Click **New Container**
+3. Fill:
+   - Database ID: `lab3c-db`
+   - Container ID: `lab3c-container`
+   - Partition Key: `/id`
+   - Throughput: 400 RU/s
+4. Click **OK**
 
 ---
 
 ### 4️⃣ Insert JSON Documents
 
-#### 🔹 Azure Portal:
+#### 🚩 Azure Portal:
 
-1. In **Data Explorer**, expand `lab3c-db` → `lab3c-container`
-2. Click **Items** → **+ New Item**
-3. Paste this:
+1. Go to `lab3c-db` > `lab3c-container` > **Items** > **+ New Item**
+2. Paste:
 
 ```json
 {
@@ -124,7 +109,7 @@ az cosmosdb sql container create \
 
 Click **Save**
 
-4. Repeat with another document:
+3. Insert second document:
 
 ```json
 {
@@ -137,53 +122,35 @@ Click **Save**
 
 Click **Save**
 
-🛑 **Note:** CLI does not support document insertion — use Portal.
+❌ Note: CLI does not support item insertion.
 
 ---
 
-### 5️⃣ Query Documents with SQL
+### 5️⃣ Query Documents
 
-#### 🔹 Azure Portal:
+#### 🚩 Azure Portal:
 
-1. Still in Data Explorer, click **New SQL Query**
-2. Run:
+1. Go to **Data Explorer** > `lab3c-container`
+2. Click **New SQL Query**, run:
 
 ```sql
 SELECT c.name, c.contribution FROM c WHERE c.role = "Mathematician"
 ```
 
-✅ Returns Ada Lovelace.
-
-🛑 **Note:** Azure CLI does not support SQL query directly — use Portal or SDKs.
+✔️ Returns Ada Lovelace.
 
 ---
 
-### 6️⃣ Explore Indexing, Throughput, and Global Scaling
+### 6️⃣ Explore Indexing, Throughput & Scaling
 
-#### 🔹 Azure Portal:
+#### 🚩 Azure Portal:
 
-1. From Cosmos DB account → use the left-hand menu to explore:
+- **Scale & Settings**: Adjust RU/s (e.g. 1000)
+- **Indexing Policy**: View/edit automatic indexes
+- **Replicate Data Globally**: Add SE Asia, change priorities
+- **Metrics**: Monitor RU, latency, throttling
 
-🔸 **Scale & Settings**:
-
-- View/adjust throughput (e.g., scale from 400 to 1000 RU/s)
-
-🔸 **Indexing Policy**:
-
-- View default automatic indexing
-- Optionally exclude fields or enable composite indexes
-
-🔸 **Replicate Data Globally**:
-
-- Add regions like Southeast Asia
-- Set failover priority
-
-🔸 **Metrics**:
-
-- Track RU usage, latency, throttled requests
-- Tune configuration based on real usage
-
-#### 🖥️ Azure CLI:
+#### 🔹 Azure CLI:
 
 ```bash
 # Scale throughput
@@ -193,16 +160,89 @@ az cosmosdb sql container throughput update \
   --name lab3c-container \
   --throughput 1000
 
-# Add a read region
+# Add failover region
 az cosmosdb failover-priority-change \
   --account-name lab3ccosmoscli \
   --resource-group lab3c-rg \
   --failover-policies australiaeast=0 southeastasia=1
 ```
 
-✅ Explore indexing and metrics via Portal only.
+---
+
+### 7️⃣ Deploy Cosmos DB via ARM Template
+
+#### 🔹 `cosmosdb-deploy.json`
+
+```json
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "accountName": { "type": "string" },
+    "location": { "type": "string" }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.DocumentDB/databaseAccounts",
+      "apiVersion": "2021-06-15",
+      "name": "[parameters('accountName')]",
+      "location": "[parameters('location')]",
+      "kind": "GlobalDocumentDB",
+      "properties": {
+        "databaseAccountOfferType": "Standard",
+        "locations": [
+          { "locationName": "[parameters('location')]", "failoverPriority": 0 }
+        ]
+      }
+    }
+  ]
+}
+```
+
+#### 🔹 `cosmosdb-deploy.parameters.json`
+
+```json
+{
+  "parameters": {
+    "accountName": { "value": "lab3c-cosmos-arm" },
+    "location": { "value": "australiaeast" }
+  }
+}
+```
+
+#### 🔹 Deploy via CLI:
+
+```bash
+az deployment group create \
+  --resource-group lab3c-rg \
+  --template-file cosmosdb-deploy.json \
+  --parameters @cosmosdb-deploy.parameters.json
+```
 
 ---
 
-✔️ **Lab complete – you provisioned an Azure Cosmos DB account, created a container, inserted/query documents, and explored performance, indexing, and scaling options.**
+### 8️⃣ Post-Deployment Validation
+
+#### ✅ CLI Checks:
+
+```bash
+az cosmosdb show \
+  --name lab3ccosmoscli \
+  --resource-group lab3c-rg \
+  --query "documentEndpoint"
+```
+
+Returns URI: `https://lab3ccosmoscli.documents.azure.com:443/`
+
+#### ✅ Portal Checks:
+
+1. Go to **lab3c-rg** → Open Cosmos DB
+2. Confirm **Data Explorer**, **Metrics**, and **Global Replication** are active
+3. Run SQL query in Portal to verify documents
+
+---
+
+## ✅ Lab Complete
+
+You deployed Cosmos DB using CLI, Portal, and ARM, created databases and containers, inserted/query documents, and explored performance, indexing, and replication features.
 
