@@ -42,7 +42,7 @@ bicep --version
 ### 2️⃣ Create a Resource Group
 
 #### 🔹 Azure CLI:
-```bash
+```bash create RG
 az group create --name lab2a-rg --location australiaeast
 ```
 
