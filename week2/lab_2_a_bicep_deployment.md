@@ -163,14 +163,25 @@ bicep build sql.bicep
 
 ### 7️⃣ Create Parameters File
 
-#### 🔹 `parameters.json`:
+#### 🔹 `web-parameters.json`:
 ```json
 {
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
   "parameters": {
-    "webAppName": { "value": "demo-webapp-unique" },
+    "webAppName": { "value": "arm-webapp-demo2025-xyz123" },
+    "location": { "value": "australiaeast" }
+  }
+}
+```
+#### 🔹 `db-parameters.json`:
+```json
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
     "location": { "value": "australiaeast" },
-    "sqlServerName": { "value": "demosqlserveruniq" },
+    "sqlServerName": { "value": "demo-sqldb-arm-2025-xyz123" },
     "sqlAdmin": { "value": "adminuser" },
     "sqlPassword": { "value": "YourP@ssw0rd123" }
   }
@@ -188,12 +199,12 @@ bicep build sql.bicep
 az deployment group create \
   --resource-group lab2a-rg \
   --template-file web.json \
-  --parameters @parameters.json
+  --parameters @web-parameters.json
 
 az deployment group create \
   --resource-group lab2a-rg \
   --template-file sql.json \
-  --parameters @parameters.json
+  --parameters @db-parameters.json
 ```
 
 #### 🔹 Azure Portal:
