@@ -62,7 +62,9 @@ VM_IP=$(az vm list-ip-addresses \
   --name lab2c-ubuntu-vm \
   --query "[0].virtualMachine.network.publicIpAddresses[0].ipAddress" \
   --output tsv)
-ssh azureuser@<"$VM_IP"
+
+  
+ssh azureuser@"$VM_IP"
 ```
 
 ✅ Accept SSH key prompt and enter the password to connect.
