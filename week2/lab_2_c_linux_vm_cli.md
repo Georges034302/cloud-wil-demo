@@ -31,13 +31,14 @@ az group create --name lab2c-rg --location australiaeast
 #### 🔹 Create Linux VM (Ubuntu2204):
 
 ```bash
+read -s -p "Enter VM admin password: " VM_PASS; echo
 az vm create \
   --resource-group lab2c-rg \
   --name lab2c-ubuntu-vm \
   --image Ubuntu2204 \
   --size Standard_B1s \
   --admin-username azureuser \
-  --admin-password 'MySecurePassword123!' \
+  --admin-password "$VM_PASS" \
   --authentication-type password \
   --output json
 ```
