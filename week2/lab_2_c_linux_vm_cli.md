@@ -28,13 +28,14 @@
 az group create --name lab2c-rg --location australiaeast
 ```
 
-#### 🔹 Create Linux VM:
+#### 🔹 Create Linux VM (Ubuntu2204):
 
 ```bash
 az vm create \
   --resource-group lab2c-rg \
   --name lab2c-ubuntu-vm \
-  --image UbuntuLTS \
+  --image Ubuntu2204 \
+  --size Standard_B1s \
   --admin-username azureuser \
   --admin-password 'MySecurePassword123!' \
   --authentication-type password \
