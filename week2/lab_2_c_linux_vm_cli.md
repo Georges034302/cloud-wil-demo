@@ -56,7 +56,12 @@ az vm create \
 #### 🔹 Terminal Command:
 
 ```bash
-ssh azureuser@<public-ip-address>
+VM_IP=$(az vm list-ip-addresses \
+  --resource-group lab2c-rg \
+  --name lab2c-ubuntu-vm \
+  --query "[0].virtualMachine.network.publicIpAddresses[0].ipAddress" \
+  --output tsv)
+ssh azureuser@<"$VM_IP"
 ```
 
 ✅ Accept SSH key prompt and enter the password to connect.
