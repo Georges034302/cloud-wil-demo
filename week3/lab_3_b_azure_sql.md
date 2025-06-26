@@ -1,12 +1,11 @@
-# 🗃️ Lab 3-B: Deploy Azure SQL Database using CLI, Portal, and ARM
+# 📃️ Lab 3-B: Deploy Azure SQL Database using CLI, Portal, and ARM
 
-## 🎯 Objective
+## 🌟 Objective
 
-- Understand Azure SQL deployment structure (server + database)
-- Deploy a SQL database using Portal, CLI, and ARM template
-- Configure firewall rules for public access
-- Connect using Query Editor and VS Code
-- Learn about pricing tiers and connectivity
+- Provision an Azure SQL Database
+- Configure firewall rules for secure access
+- Connect using Azure Cloud Shell, VS Code, or Docker (sqlcmd)
+- Understand pricing tiers and connectivity methods
 
 ---
 
@@ -15,125 +14,151 @@
 - Azure Subscription (Free or Pay-As-You-Go)
 - **Azure CLI** v2.38.0+
 - **Access to Azure Portal**
-- **Visual Studio Code** with **SQL Server (mssql)** extension
+- **Visual Studio Code** (optional) with **SQL Server (mssql)** extension
+- **Docker** (optional) or MySQL Workbench with ODBC driver
 
 ---
 
 ## 👣 Lab Instructions
 
-### 1️⃣ Create a Resource Group
+### 1️⃣ Create a Resource Group and SQL Server
 
 #### 🔹 Azure CLI:
 
 ```bash
-az group create --name lab3b-rg --location australiaeast
-```
+az group create --name sql-demo-rg --location australiaeast
 
-#### 🔹 Azure Portal:
+read -s -p "🔑 Enter a strong password for the SQL admin account: " SQL_PASSWORD
 
-1. Navigate to [Azure Portal](https://portal.azure.com)
-2. Search for **Resource Groups** → **+ Create**
-3. Resource Group: `lab3b-rg`
-4. Region: `Australia East` → **Review + Create** → **Create**
-
----
-
-### 2️⃣ Deploy Azure SQL Database
-
-#### 🔹 Azure CLI:
-
-```bash
-# Create SQL logical server
 az sql server create \
-  --name lab3b-sqlserver-cli \
-  --resource-group lab3b-rg \
+  --name studentsqlserver123 \
+  --resource-group sql-demo-rg \
   --location australiaeast \
   --admin-user sqladmin \
-  --admin-password MySecurePassword123!
+  --admin-password "$SQL_PASSWORD"
 
-# Create SQL database
 az sql db create \
-  --resource-group lab3b-rg \
-  --server lab3b-sqlserver-cli \
-  --name lab3b-sqldb-cli \
+  --resource-group sql-demo-rg \
+  --server studentsqlserver123 \
+  --name studentdb \
   --service-objective Basic
 ```
 
 #### 🔹 Azure Portal:
 
-1. Search **SQL databases** → **+ Create**
-2. Basics tab:
-   - Resource Group: `lab3b-rg`
-   - Database name: `lab3b-sqldb`
-   - Server: **Create new**: `lab3b-sqlserver-<unique>`
-     - Admin: `sqladmin`, Password: `MySecurePassword123!`
-     - Region: `Australia East`
-3. Pricing Tier: Choose **Basic** or **General Purpose: Serverless**
-4. Review + Create → Create
+1. Navigate to [Azure Portal](https://portal.azure.com)
+2. Search for **SQL databases** → **+ Create**
+3. Basics tab:
+   - Resource Group: `sql-demo-rg`
+   - Database name: `studentdb`
+   - Server: **Create new** → Name: `studentsqlserver123`, Admin: `sqladmin`, Password: enter secure password
+   - Location: `Australia East`
+4. Pricing Tier: **Basic**
+5. Review + Create → Create
 
 ✅ Server and DB are now provisioned.
 
 ---
 
-### 3️⃣ Configure SQL Firewall Access
+### 2️⃣ Configure SQL Firewall Access
 
 #### 🔹 Azure CLI:
 
 ```bash
 az sql server firewall-rule create \
-  --resource-group lab3b-rg \
-  --server lab3b-sqlserver-cli \
-  --name AllowMyIP \
+  --resource-group sql-demo-rg \
+  --server studentsqlserver123 \
+  --name allow-local-ip \
   --start-ip-address <your-ip> \
   --end-ip-address <your-ip>
+
+# Optional: open wide public access (demo only)
+# --start-ip-address 0.0.0.0 \
+# --end-ip-address 255.255.255.255
 ```
 
 #### 🔹 Azure Portal:
 
-1. Go to SQL Database → Linked Server
-2. Click **Networking**
-3. Click **+ Add client IP** → **Save**
+1. Go to SQL Server → Networking
+2. Click **+ Add client IP** → Save
 
-✅ Your IP address is now allowed to connect.
+✅ Your IP is now whitelisted.
 
 ---
 
-### 4️⃣ Connect Using Portal Query Editor
+### 3️⃣ Connect to SQL Database
 
-1. Navigate to SQL Database → Click **Query Editor (Preview)**
-2. Login:
-   - Username: `sqladmin`
-   - Password: `MySecurePassword123!`
-3. Query:
+#### 🐳 Option 1: Docker (sqlcmd)
 
-```sql
-SELECT name, create_date FROM sys.databases;
+```bash
+docker run -it --rm mcr.microsoft.com/mssql-tools \
+  /opt/mssql-tools/bin/sqlcmd -S studentsqlserver123.database.windows.net -U sqladmin -d studentdb
 ```
 
-✅ Confirms access and visibility.
+📌 For scripting (avoid hardcoding passwords):
 
----
+```bash
+docker run -it --rm mcr.microsoft.com/mssql-tools \
+  /opt/mssql-tools/bin/sqlcmd -S studentsqlserver123.database.windows.net -U sqladmin -P 'YourPassword' -d studentdb
+```
 
-### 5️⃣ Connect Using Visual Studio Code
+🔗 [Install sqlcmd](https://learn.microsoft.com/sql/tools/sqlcmd-utility)
 
-1. Open **VS Code** → Extensions → Install **SQL Server (mssql)**
+#### 🧰 Option 2: Visual Studio Code
+
+1. Install **SQL Server (mssql)** extension
 2. Press `Ctrl+Shift+P` → **MS SQL: Connect**
-3. Fill:
-   - Server: `lab3b-sqlserver-cli.database.windows.net`
-   - Database: `lab3b-sqldb-cli`
-   - Auth: SQL Login → User: `sqladmin`, Pass: `MySecurePassword123!`
+3. Fill in:
+   - Server: `studentsqlserver123.database.windows.net`
+   - Database: `studentdb`
+   - Authentication: SQL Login
+   - Username: `sqladmin`
+   - Password: Your secure password
 
-Run:
+#### 🧰 Option 3: MySQL Workbench (via ODBC)
 
-```sql
-SELECT name FROM sys.databases;
-```
-
-✅ You should see your database listed.
+1. Install **ODBC Driver 18 for SQL Server**
+2. Add **System DSN**:
+   - Server: `studentsqlserver123.database.windows.net`
+   - Auth: SQL Login
+   - Encrypt: Yes, Trust Cert: No
+3. Connect in Workbench using DSN
 
 ---
 
-### 6️⃣ Deploy SQL via ARM Template
+### 4️⃣ Post-Deployment Testing
+
+After connection, run:
+
+```sql
+SELECT DB_NAME();
+GO
+
+CREATE TABLE students (
+  id INT PRIMARY KEY,
+  name NVARCHAR(100),
+  enrolled_date DATE
+);
+GO
+
+SELECT TABLE_SCHEMA, TABLE_NAME
+FROM INFORMATION_SCHEMA.TABLES
+WHERE TABLE_TYPE = 'BASE TABLE';
+GO
+
+INSERT INTO students (id, name, enrolled_date)
+VALUES (1, 'Alice Smith', '2024-06-01');
+GO
+
+SELECT * FROM students;
+GO
+```
+
+✅ Confirms creation, insert, and read access.
+
+---
+
+### 5️⃣ Deploy SQL via ARM Template (Optional)
 
 #### 🔹 `sql-db-deploy.json`
 
@@ -178,10 +203,10 @@ SELECT name FROM sys.databases;
 ```json
 {
   "parameters": {
-    "serverName": { "value": "lab3b-sqlserver-arm" },
+    "serverName": { "value": "studentsqlserver-arm" },
     "adminUser": { "value": "sqladmin" },
     "adminPassword": { "value": "MySecurePassword123!" },
-    "databaseName": { "value": "lab3b-sqldb-arm" },
+    "databaseName": { "value": "studentdb-arm" },
     "location": { "value": "australiaeast" }
   }
 }
@@ -191,7 +216,7 @@ SELECT name FROM sys.databases;
 
 ```bash
 az deployment group create \
-  --resource-group lab3b-rg \
+  --resource-group sql-demo-rg \
   --template-file sql-db-deploy.json \
   --parameters @sql-db-deploy.parameters.json
 ```
@@ -200,34 +225,15 @@ az deployment group create \
 
 ---
 
-### 7️⃣ Post-Deployment Testing
-
-#### ✅ Check resources:
+### 6️⃣ Cleanup (Optional)
 
 ```bash
-az sql server show --name lab3b-sqlserver-cli --resource-group lab3b-rg
-az sql db show --name lab3b-sqldb-cli --server lab3b-sqlserver-cli --resource-group lab3b-rg
+az group delete --name sql-demo-rg --yes --no-wait
 ```
-
-#### ✅ Confirm firewall rule:
-
-```bash
-az sql server firewall-rule list --server lab3b-sqlserver-cli --resource-group lab3b-rg
-```
-
-#### ✅ Test login via VS Code or Portal Query Editor:
-
-Run:
-
-```sql
-SELECT name FROM sys.databases;
-```
-
-✅ Response confirms authentication and database availability.
 
 ---
 
 ## ✅ Lab Complete
 
-You’ve deployed Azure SQL Database using CLI, Portal, and ARM templates, configured secure firewall access, and validated connection via the portal and Visual Studio Code.
+You’ve successfully deployed and accessed Azure SQL Database using CLI, Portal, Docker, and optionally VS Code or MySQL Workbench!
 
