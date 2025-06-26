@@ -155,7 +155,7 @@ az cosmosdb failover-priority-change \
 
 ---
 
-### 7️⃣ Clean Up Resources (Optional)
+### 7️⃣ Clean Up Resources 
 
 ```bash
 az group delete --name lab3c-rg --yes --no-wait

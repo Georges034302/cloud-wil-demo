@@ -225,7 +225,7 @@ az deployment group create \
 
 ---
 
-### 6️⃣ Cleanup (Optional)
+### 6️⃣ Resources Cleanup 
 
 ```bash
 az group delete --name sql-demo-rg --yes --no-wait

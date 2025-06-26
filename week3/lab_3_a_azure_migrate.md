@@ -90,7 +90,7 @@ az group create --name lab3a-rg --location australiaeast
 
 ---
 
-### 📊 Optional: Clean Up Resources
+### 📊 Clean Up Resources
 
 ```bash
 # Delete the resource group and all resources
