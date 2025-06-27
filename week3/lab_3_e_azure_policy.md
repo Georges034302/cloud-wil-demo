@@ -146,11 +146,7 @@ az policy state list \
 
 ---
 
-### 7️⃣ Clean Up Resources
-
-```bash
-az group delete --name lab3e-rg --yes --no-wait
-```
+### Clean up Resouces after completing Lab_3_f
 
 ---
 

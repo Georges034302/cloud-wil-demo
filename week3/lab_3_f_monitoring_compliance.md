@@ -154,6 +154,13 @@ az monitor diagnostic-settings list --resource "/providers/Microsoft.PolicyInsig
 You can also use Kusto Query Language (KQL) in Log Analytics to query historical policy compliance trends.
 
 ---
+### Clean Up Resources
+
+```bash
+az group delete --name lab3e-rg --yes --no-wait
+```
+
+---
 
 ## ✅ Lab Complete
 
