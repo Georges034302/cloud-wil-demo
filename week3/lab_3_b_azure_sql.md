@@ -29,9 +29,10 @@
 az group create --name sql-demo-rg --location australiaeast
 
 read -s -p "🔑 Enter a strong password for the SQL admin account: " SQL_PASSWORD
+SQL_SERVER=studentsqlserver$RANDOM
 
 az sql server create \
-  --name studentsqlserver123 \
+  --name "$SQL_SERVER" \
   --resource-group sql-demo-rg \
   --location australiaeast \
   --admin-user sqladmin \
@@ -39,7 +40,7 @@ az sql server create \
 
 az sql db create \
   --resource-group sql-demo-rg \
-  --server studentsqlserver123 \
+  --server "$SQL_SERVER" \
   --name studentdb \
   --service-objective Basic
 ```
@@ -67,7 +68,7 @@ az sql db create \
 ```bash
 az sql server firewall-rule create \
   --resource-group sql-demo-rg \
-  --server studentsqlserver123 \
+  --server "$SQL_SERVER" \
   --name allow-local-ip \
   --start-ip-address <your-ip> \
   --end-ip-address <your-ip>
@@ -92,14 +93,14 @@ az sql server firewall-rule create \
 
 ```bash
 docker run -it --rm mcr.microsoft.com/mssql-tools \
-  /opt/mssql-tools/bin/sqlcmd -S studentsqlserver123.database.windows.net -U sqladmin -d studentdb
+  /opt/mssql-tools/bin/sqlcmd -S "$SQL_SERVER".database.windows.net -U sqladmin -d studentdb
 ```
 
 📌 For scripting (avoid hardcoding passwords):
 
 ```bash
 docker run -it --rm mcr.microsoft.com/mssql-tools \
-  /opt/mssql-tools/bin/sqlcmd -S studentsqlserver123.database.windows.net -U sqladmin -P 'YourPassword' -d studentdb
+  /opt/mssql-tools/bin/sqlcmd -S "$SQL_SERVER".database.windows.net -U sqladmin -P 'YourPassword' -d studentdb
 ```
 
 🔗 [Install sqlcmd](https://learn.microsoft.com/sql/tools/sqlcmd-utility)
