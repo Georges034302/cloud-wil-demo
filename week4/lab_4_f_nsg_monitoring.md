@@ -197,6 +197,13 @@ az storage blob list \
   --output table
 ```
 
+### 📊 Clean Up Resources (Important to delete week 4 resources)
+
+```bash
+# Delete the resource group and all resources
+az group delete --name lab4-rg --yes --no-wait
+```
+
 ---
 
 ## ✅ Lab Complete
