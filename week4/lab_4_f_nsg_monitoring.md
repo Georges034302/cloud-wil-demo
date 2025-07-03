@@ -14,7 +14,7 @@
 
 - Azure subscription
 - Azure CLI installed and logged in (`az login`)
-- Existing Resource Group: `lab4c-rg`
+- Existing Resource Group: `lab4-rg`
 - Existing NSG: `web-nsg`
 - Existing VNet and subnet with NIC (e.g., VM in `web-subnet`)
 - Existing storage account for log retention
@@ -37,7 +37,7 @@
 ```bash
 az network watcher configure \
   --locations australiaeast \
-  --resource-group lab4c-rg \
+  --resource-group lab4-rg \
   --enabled true
 ```
 
@@ -59,7 +59,7 @@ Deploy with:
 
 ```bash
 az deployment group create \
-  --resource-group lab4c-rg \
+  --resource-group lab4-rg \
   --template-file networkwatcher-deployment.json
 ```
 
@@ -77,7 +77,7 @@ az deployment group create \
 
 ```bash
 az network watcher list-effective-nsg \
-  --resource-group lab4c-rg \
+  --resource-group lab4-rg \
   --network-interface <nic-name> \
   --output table
 ```
@@ -85,7 +85,7 @@ az network watcher list-effective-nsg \
 ✅ Replace `<nic-name>` using:
 ```bash
 az vm show \
-  --resource-group lab4c-rg \
+  --resource-group lab4-rg \
   --name <vm-name> \
   --query 'networkProfile.networkInterfaces[0].id' \
   --output tsv
@@ -108,7 +108,7 @@ az vm show \
 
 ```bash
 az network watcher flow-log configure \
-  --resource-group lab4c-rg \
+  --resource-group lab4-rg \
   --nsg-name web-nsg \
   --enabled true \
   --storage-account <storage-name> \
@@ -128,8 +128,8 @@ az network watcher flow-log configure \
   "location": "australiaeast",
   "properties": {
     "enabled": true,
-    "storageId": "/subscriptions/<SUBSCRIPTION_ID>/resourceGroups/lab4c-rg/providers/Microsoft.Storage/storageAccounts/<storage-name>",
-    "targetResourceId": "/subscriptions/<SUBSCRIPTION_ID>/resourceGroups/lab4c-rg/providers/Microsoft.Network/networkSecurityGroups/web-nsg",
+    "storageId": "/subscriptions/<SUBSCRIPTION_ID>/resourceGroups/lab4-rg/providers/Microsoft.Storage/storageAccounts/<storage-name>",
+    "targetResourceId": "/subscriptions/<SUBSCRIPTION_ID>/resourceGroups/lab4-rg/providers/Microsoft.Network/networkSecurityGroups/web-nsg",
     "retentionPolicy": {
       "days": 7,
       "enabled": true
@@ -150,7 +150,7 @@ Check flow log status:
 
 ```bash
 az network watcher flow-log show \
-  --resource-group lab4c-rg \
+  --resource-group lab4-rg \
   --nsg-name web-nsg \
   --output jsonc
 ```

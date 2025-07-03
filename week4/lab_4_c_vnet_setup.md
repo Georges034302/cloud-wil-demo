@@ -48,7 +48,7 @@ az group create --name lab4-rg --location australiaeast
 1. Go to **Virtual networks** → **+ Create**
 2. **Basics** tab:
    - **Resource group**: `lab4-rg`
-   - **Name**: `lab4c-vnet`
+   - **Name**: `lab4-vnet`
    - **Region**: `Australia East`
 3. **IP Addresses** tab:
    - **Address space**: `10.1.0.0/16`
@@ -61,7 +61,7 @@ az group create --name lab4-rg --location australiaeast
 
 ```bash
 az network vnet create \
-  --name lab4c-vnet \
+  --name lab4-vnet \
   --resource-group lab4-rg \
   --location australiaeast \
   --address-prefix 10.1.0.0/16 \
@@ -71,7 +71,7 @@ az network vnet create \
 az network vnet subnet create \
   --name db-subnet \
   --resource-group lab4-rg \
-  --vnet-name lab4c-vnet \
+  --vnet-name lab4-vnet \
   --address-prefix 10.1.2.0/24
 ```
 
@@ -91,7 +91,7 @@ az network vnet subnet create \
     {
       "type": "Microsoft.Network/virtualNetworks",
       "apiVersion": "2023-02-01",
-      "name": "lab4c-vnet",
+      "name": "lab4-vnet",
       "location": "australiaeast",
       "properties": {
         "addressSpace": {
@@ -133,7 +133,7 @@ az deployment group create \
 
 #### 🔹 Azure Portal:
 
-1. Go to **Virtual networks** → Select `lab4c-vnet`
+1. Go to **Virtual networks** → Select `lab4-vnet`
 2. Click **Subnets**
 3. Confirm:
    - `web-subnet` → `10.1.1.0/24`
@@ -144,7 +144,7 @@ az deployment group create \
 ```bash
 az network vnet subnet list \
   --resource-group lab4-rg \
-  --vnet-name lab4c-vnet \
+  --vnet-name lab4-vnet \
   --output table
 ```
 

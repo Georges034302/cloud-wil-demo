@@ -14,8 +14,8 @@
 ## 🧰 Requirements
 
 - Azure subscription with Owner/Contributor role
-- Existing Resource Group: `lab4c-rg`
-- Virtual Network `lab4c-vnet` with subnets `web-subnet` and `db-subnet`
+- Existing Resource Group: `lab4-rg`
+- Virtual Network `lab4-vnet` with subnets `web-subnet` and `db-subnet`
 - Azure CLI installed and authenticated (`az login`)
 
 ---
@@ -28,7 +28,7 @@
 
 1. Go to **Network security groups** → Click **+ Create**
 2. Under **Basics**:
-   - Resource group: `lab4c-rg`
+   - Resource group: `lab4-rg`
    - Name: `web-nsg`
    - Region: `Australia East`
 3. Click **Review + Create** → **Create**
@@ -37,7 +37,7 @@
 
 ```bash
 az network nsg create \
-  --resource-group lab4c-rg \
+  --resource-group lab4-rg \
   --name web-nsg \
   --location australiaeast
 ```
@@ -64,7 +64,7 @@ az network nsg create \
 
 ```bash
 az network nsg rule create \
-  --resource-group lab4c-rg \
+  --resource-group lab4-rg \
   --nsg-name web-nsg \
   --name Allow-HTTP \
   --priority 100 \
@@ -84,7 +84,7 @@ az network nsg rule create \
 
 1. Go to **web-nsg** → **Subnets** → **+ Associate**
 2. Select:
-   - Virtual Network: `lab4c-vnet`
+   - Virtual Network: `lab4-vnet`
    - Subnet: `web-subnet`
 3. Click **OK**
 
@@ -92,15 +92,23 @@ az network nsg rule create \
 
 ```bash
 az network vnet subnet update \
-  --vnet-name lab4c-vnet \
+  --vnet-name lab4-vnet \
   --name web-subnet \
-  --resource-group lab4c-rg \
+  --resource-group lab4-rg \
   --network-security-group web-nsg
 ```
 
 ---
 
 ### 4️⃣ Deploy NSG Using ARM Template
+
+🛠 Replace:
+
+- `<SUBSCRIPTION_ID>` with your actual subscription ID
+
+  ```bash
+  SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+  ```
 
 #### `nsg-deployment.json`
 
@@ -135,12 +143,12 @@ az network vnet subnet update \
     {
       "type": "Microsoft.Network/virtualNetworks/subnets",
       "apiVersion": "2023-02-01",
-      "name": "lab4c-vnet/web-subnet",
+      "name": "lab4-vnet/web-subnet",
       "dependsOn": ["Microsoft.Network/networkSecurityGroups/web-nsg"],
       "properties": {
         "addressPrefix": "10.1.1.0/24",
         "networkSecurityGroup": {
-          "id": "/subscriptions/<SUBSCRIPTION_ID>/resourceGroups/lab4c-rg/providers/Microsoft.Network/networkSecurityGroups/web-nsg"
+          "id": "/subscriptions/<SUBSCRIPTION_ID>/resourceGroups/lab4-rg/providers/Microsoft.Network/networkSecurityGroups/web-nsg"
         }
       }
     }
@@ -148,13 +156,11 @@ az network vnet subnet update \
 }
 ```
 
-> Replace `<SUBSCRIPTION_ID>` with your actual subscription ID.
-
 #### 🔤 Deploy via CLI:
 
 ```bash
 az deployment group create \
-  --resource-group lab4c-rg \
+  --resource-group lab4-rg \
   --template-file nsg-deployment.json
 ```
 
@@ -164,7 +170,7 @@ az deployment group create \
 
 #### 🔹 Azure Portal:
 
-1. Navigate to **Virtual networks** → `lab4c-vnet` → **Subnets**
+1. Navigate to **Virtual networks** → `lab4-vnet` → **Subnets**
 2. Confirm `web-subnet` is linked to `web-nsg`
 3. Go to **Network security groups** → `web-nsg` → **Inbound rules** → Ensure `Allow-HTTP` is listed
 
@@ -172,13 +178,13 @@ az deployment group create \
 
 ```bash
 az network vnet subnet show \
-  --vnet-name lab4c-vnet \
+  --vnet-name lab4-vnet \
   --name web-subnet \
-  --resource-group lab4c-rg \
+  --resource-group lab4-rg \
   --query "networkSecurityGroup.id"
 
 az network nsg rule list \
-  --resource-group lab4c-rg \
+  --resource-group lab4-rg \
   --nsg-name web-nsg \
   --output table
 ```
