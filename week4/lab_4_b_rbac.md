@@ -16,8 +16,11 @@
 - An Entra ID (Azure AD) user or group (e.g., `labuser1` or `lab-users` from Lab 4-A)
 - Azure CLI installed and authenticated (`az login`)
 - Access to [https://portal.azure.com](https://portal.azure.com)
-- Existing resource group (e.g., `lab4b-rg` or `lab3e-rg`)
-
+- Create resource group (e.g., `lab4-rg`). 
+  ```bash
+    az group create --name lab4b-rg --location australiaeast
+  ```
+  **Note:** This resource group will be use for all week 4 labs
 ---
 
 ## 👣 Lab Instructions
