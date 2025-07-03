@@ -17,8 +17,9 @@
 - Azure CLI installed and authenticated (`az login`)
 - Access to [https://portal.azure.com](https://portal.azure.com)
 - Create resource group (e.g., `lab4-rg`). 
+
   ```bash
-    az group create --name lab4b-rg --location australiaeast
+    az group create --name lab4-rg --location australiaeast
   ```
   **Note:** This resource group will be use for all week 4 labs
 ---
@@ -29,7 +30,7 @@
 
 #### 🔹 Azure Portal:
 
-1. Go to the **Azure Portal** → Navigate to your **Resource Group** (e.g., `lab4b-rg`)
+1. Go to the **Azure Portal** → Navigate to your **Resource Group** (e.g., `lab4-rg`)
 2. Select **Access control (IAM)**
 3. Click **+ Add** → **Add role assignment**
 4. Set the following:
@@ -48,7 +49,7 @@ SUBSCRIPTION_ID=$(az account show --query id -o tsv)
 az role assignment create \
   --assignee labuser1@<yourdomain> \
   --role Reader \
-  --scope /subscriptions/$SUBSCRIPTION_ID/resourceGroups/lab4b-rg
+  --scope /subscriptions/$SUBSCRIPTION_ID/resourceGroups/lab4-rg
 ```
 
 ✅ Replace `<yourdomain>` with your Azure AD domain.
@@ -56,6 +57,16 @@ az role assignment create \
 ---
 
 ### 2️⃣ Role Assignment Using ARM Template
+
+#### Get the User object ID (use it in the in ARM template '<USER_OBJECT_ID>')
+
+```bash
+  az ad user show --id labuser1@<yourdomain> --query objectId --output tsv
+```
+🛠 Replace:
+
+- `<SUBSCRIPTION_ID>` with your actual subscription ID
+- `<USER_OBJECT_ID>` with the object ID of `labuser1`
 
 #### `rbac-assignment.json`
 
@@ -71,23 +82,18 @@ az role assignment create \
       "properties": {
         "roleDefinitionId": "/subscriptions/<SUBSCRIPTION_ID>/providers/Microsoft.Authorization/roleDefinitions/acdd72a7-3385-48ef-bd42-f606fba81ae7",
         "principalId": "<USER_OBJECT_ID>",
-        "scope": "/subscriptions/<SUBSCRIPTION_ID>/resourceGroups/lab4b-rg"
+        "scope": "/subscriptions/<SUBSCRIPTION_ID>/resourceGroups/lab4-rg"
       }
     }
   ]
 }
 ```
 
-🛠 Replace:
-
-- `<SUBSCRIPTION_ID>` with your actual subscription ID
-- `<USER_OBJECT_ID>` with the object ID of `labuser1`
-
 #### Deploy via CLI:
 
 ```bash
 az deployment group create \
-  --resource-group lab4b-rg \
+  --resource-group lab4-rg \
   --template-file rbac-assignment.json
 ```
 

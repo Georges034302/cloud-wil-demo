@@ -15,7 +15,7 @@
 - Azure subscription
 - Azure Portal access: [https://portal.azure.com](https://portal.azure.com)
 - Azure CLI installed and authenticated (`az login`)
-- Existing resource group (e.g., `lab4c-rg`)
+- Existing resource group (e.g., `lab4-rg`)
 
 ---
 
@@ -27,14 +27,14 @@
 
 1. Navigate to **Resource groups** → **+ Create**
 2. Fill in:
-   - **Name**: `lab4c-rg`
+   - **Name**: `lab4-rg`
    - **Region**: `Australia East`
 3. Click **Review + Create** → **Create**
 
 #### 🔤 Azure CLI:
 
 ```bash
-az group create --name lab4c-rg --location australiaeast
+az group create --name lab4-rg --location australiaeast
 ```
 
 ✅ Resource group created.
@@ -47,7 +47,7 @@ az group create --name lab4c-rg --location australiaeast
 
 1. Go to **Virtual networks** → **+ Create**
 2. **Basics** tab:
-   - **Resource group**: `lab4c-rg`
+   - **Resource group**: `lab4-rg`
    - **Name**: `lab4c-vnet`
    - **Region**: `Australia East`
 3. **IP Addresses** tab:
@@ -62,7 +62,7 @@ az group create --name lab4c-rg --location australiaeast
 ```bash
 az network vnet create \
   --name lab4c-vnet \
-  --resource-group lab4c-rg \
+  --resource-group lab4-rg \
   --location australiaeast \
   --address-prefix 10.1.0.0/16 \
   --subnet-name web-subnet \
@@ -70,7 +70,7 @@ az network vnet create \
 
 az network vnet subnet create \
   --name db-subnet \
-  --resource-group lab4c-rg \
+  --resource-group lab4-rg \
   --vnet-name lab4c-vnet \
   --address-prefix 10.1.2.0/24
 ```
@@ -121,7 +121,7 @@ az network vnet subnet create \
 
 ```bash
 az deployment group create \
-  --resource-group lab4c-rg \
+  --resource-group lab4-rg \
   --template-file vnet-deployment.json
 ```
 
@@ -143,7 +143,7 @@ az deployment group create \
 
 ```bash
 az network vnet subnet list \
-  --resource-group lab4c-rg \
+  --resource-group lab4-rg \
   --vnet-name lab4c-vnet \
   --output table
 ```
