@@ -102,13 +102,13 @@ az network firewall ip-config create \
 
 **Azure CLI:**
 ```bash
-az network firewall network-rule collection add \
+az network firewall network-rule create \
   --firewall-name lab4-fw \
   --resource-group lab4-rg \
   --collection-name AllowWebOut \
   --priority 100 \
   --action Allow \
-  --rule-name AllowHTTP \
+  --name AllowHTTP \
   --protocols TCP \
   --source-addresses '*' \
   --destination-addresses '*' \
