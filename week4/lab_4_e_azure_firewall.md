@@ -127,7 +127,7 @@ az network vnet subnet create \
   --resource-group lab4-rg \
   --vnet-name lab4-vnet \
   --name test-subnet \
-  --address-prefixes 10.1.1.0/24
+  --address-prefixes 10.1.5.0/24
 ```
 
 #### Deploy a Test VM into the Test Subnet
