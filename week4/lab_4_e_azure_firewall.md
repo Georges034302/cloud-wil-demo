@@ -133,7 +133,7 @@ az network vnet subnet create \
 #### Deploy a Test VM into the Test Subnet
 
 ```bash
-AMIN_PASSWORD=P@ssword@$RANDOM
+ADMIN_PASSWORD=P@ssword@$RANDOM
 
 az vm create \
   --resource-group lab4-rg \
