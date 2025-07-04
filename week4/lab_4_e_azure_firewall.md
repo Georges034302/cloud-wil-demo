@@ -198,6 +198,11 @@ az network vnet subnet update \
 ```bash
 az vm ssh -g lab4-rg -n testvm
 ```
+If the above does not work, get the testvm public IP and use the ssh CLI:
+```bash
+ssh azureuser@<test vm public ip>
+```
+
 
 - **Test HTTP (Should Succeed):**
 
