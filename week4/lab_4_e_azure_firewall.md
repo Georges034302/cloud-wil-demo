@@ -136,7 +136,7 @@ az network vnet subnet create \
 AMIN_PASSWORD=P@ssword@$RANDOM
 
 az vm create \
-  --resource-group lab2c-rg \
+  --resource-group lab4-rg \
   --name lab2c-ubuntu-vm \
   --image Ubuntu2204 \
   --size Standard_B1s \
