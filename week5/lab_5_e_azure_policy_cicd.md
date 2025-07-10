@@ -1,178 +1,213 @@
-# 🛡️ Lab 5-E: Integrate Azure Policy in CI/CD
+# 🛡️ Lab 5-E: Enforce Region Policy with Azure Policy in CI/CD
 
 ## 🎯 Objectives
 
-- Understand Azure Policy as a governance-as-code tool
-- Assign policies to enforce rules during deployments
-- Integrate policy enforcement in a CI/CD pipeline
-- Remediate existing resources to meet policy
-- Validate compliance using Azure CLI, Portal, and ARM
+- Define and assign an Azure Policy to enforce regional compliance
+- Integrate Azure Policy into GitHub Actions CI/CD workflow
+- Use ARM/Bicep templates and Azure CLI in GitHub Actions
+- Deny deployments to any region except `australiaeast`
 
 ---
 
 ## 🛠️ Requirements
 
-- Azure CLI installed (`az login`)
-- Azure Portal access
-- Resource group: `lab5-rg` with existing deployments
-- Optional: GitHub Actions or Azure DevOps pipeline
-- Familiarity with resource deployment and ARM templates
+| Requirement         | Description                                                  |
+| ------------------- | ------------------------------------------------------------ |
+| ✅ Azure CLI         | Installed and authenticated (`az login`)                    |
+| ✅ GitHub CLI        | Installed and authenticated using PAT (Lab 5-A)             |
+| ✅ `.env` file       | Contains Azure credentials and is in `.gitignore`           |
+| ✅ GitHub Secrets    | `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID` |
+| ✅ App repo setup    | Contains session6/policy files with definition and assignment |
 
 ---
 
-## 👣 Lab Instructions
+## 📁 Project Structure
 
-### 1️⃣ Review Built-In Azure Policy Definitions
-
-#### 🌐 Azure Portal:
-
-1. Navigate to [Azure Portal](https://portal.azure.com)
-2. Search and select **Policy**
-3. Go to **Definitions**
-4. Filter by **Type = Built-in**
-5. Review definitions like:
-   - **Require a tag on resources**
-   - **Allowed locations**
-   - **Audit VMs without managed disks**
-
-📝 Note the **Definition ID** of any policy you want to use.
-
----
-
-### 2️⃣ Assign "Require a tag on resources" Policy
-
-#### 🌐 Azure Portal:
-
-1. Go to **Policy → Assignments**
-2. Click **+ Assign Policy**
-3. **Scope**: Select `lab5-rg`
-4. **Policy definition**: Choose `Require a tag on resources`
-5. **Assignment name**: `EnforceEnvironmentTag`
-6. Under **Parameters**:
-   - **Tag name**: `environment`
-7. Click **Review + Create → Create**
-
-✅ Policy is now active on `lab5-rg`
-
-#### 💻 Azure CLI:
+### Step 1. ⚙️ Create Project Files
 
 ```bash
-# Get definition ID
-az policy definition list --query "[?displayName=='Require a tag on resources'].{Name:displayName, ID:policyDefinitionId}" -o table
-
-# Assign the policy
-az policy assignment create \
-  --name EnforceEnvironmentTag \
-  --policy <definition-id> \
-  --resource-group lab5-rg \
-  --params '{"tagName": {"value": "environment"}}'
+mkdir -p week5/definitions/allowedLocations
+mkdir -p week5/assignments
+touch week5/definitions/allowedLocations/policy.json
+touch week5/assignments/assign-aue-prod.bicep
 ```
-
-🔁 Replace `<definition-id>` with the exact ID from the query.
-
----
-
-### 3️⃣ Deploy a Non-Compliant Resource (Expected Failure)
+#### ✅ Expected Outcome:
 
 ```bash
-az storage account create \
-  --name nostoragetag1234 \
-  --resource-group lab5-rg \
-  --location australiaeast \
-  --sku Standard_LRS
+📁 your-repo/
+└── week5/
+    ├── definitions/
+    │   └── allowedLocations/
+    │       └── policy.json
+    └── assignments/
+        └── assign-aue-prod.bicep
 ```
 
-❌ Deployment will fail due to missing `environment` tag.
+### Step 2. 🔖 Policy Definition File
 
----
-
-### 4️⃣ Redeploy with Compliant Tag
-
-```bash
-az storage account create \
-  --name tagstoragedev01 \
-  --resource-group lab5-rg \
-  --location australiaeast \
-  --sku Standard_LRS \
-  --tags environment=dev
-```
-
-✅ Deployment succeeds.
-
----
-
-### 5️⃣ Deploy Policy Assignment with ARM
-
-Create `policy-assignment.json`:
+`week56/definitions/allowedLocations/policy.json`:
 
 ```json
 {
-  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-  "contentVersion": "1.0.0.0",
-  "parameters": {},
-  "resources": [
-    {
-      "type": "Microsoft.Authorization/policyAssignments",
-      "apiVersion": "2021-06-01",
-      "name": "EnforceEnvironmentTag",
-      "properties": {
-        "policyDefinitionId": "/providers/Microsoft.Authorization/policyDefinitions/"  
-          "c2b0429a-7fc1-4471-9bd6-5ebc8198b5d0",
-        "scope": "/subscriptions/<subscription-id>/resourceGroups/lab5-rg",
-        "parameters": {
-          "tagName": { "value": "environment" }
-        }
-      }
-    }
-  ]
+  "if": {
+    "field": "location",
+    "notEquals": "australiaeast"
+  },
+  "then": {
+    "effect": "deny"
+  }
 }
 ```
 
-```bash
-az deployment sub create \
-  --location australiaeast \
-  --template-file policy-assignment.json
-```
+---
 
-🔁 Replace `<subscription-id>` with your actual ID.
+### Step 3. 🧱 Bicep Assignment Template
+
+`week5/assignments/assign-aue-prod.bicep`:
+
+```bicep
+param policyDefinitionId string
+
+resource policyAssignment 'Microsoft.Authorization/policyAssignments@2021-06-01' = {
+  name: 'enforce-australiaeast-only'
+  properties: {
+    displayName: 'Enforce Australia East Region'
+    policyDefinitionId: policyDefinitionId
+    scope: subscription().id
+  }
+}
+```
 
 ---
 
-### 6️⃣ Validate Compliance
+## 🤖 GitHub Actions Workflow
 
-#### 💻 Azure CLI:
+### ✨ Create CI/CD workflow: `.github/workflows/deploy-region-policy.yml`
 
-```bash
-az policy state list \
-  --resource-group lab5-rg \
-  --query "[?complianceState=='NonCompliant']" -o table
+```yaml
+name: Deploy Region Policy
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'session6/**'
+      - '.github/workflows/deploy-region-policy.yml'
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Create Region Policy Definition
+        run: |
+          az policy definition create \
+            --name allowed-locations \
+            --rules @week5/definitions/allowedLocations/policy.json \
+            --mode All \
+            --display-name "Allowed Locations - Australia East Only" \
+            --description "Only allow resource creation in australiaeast."
+
+      - name: Assign Region Policy via Bicep
+        run: |
+          POLICY_DEF_ID=$(az policy definition show --name allowed-locations --query id -o tsv)
+
+          az deployment sub create \
+            --location australiaeast \
+            --template-file week5/assignments/assign-aue-prod.bicep \
+            --parameters policyDefinitionId=$POLICY_DEF_ID \
+            --name assign-location-
 ```
 
-#### 🌐 Azure Portal:
+### 🚀 Deploy Policy in CI/CD workflow
 
-1. Go to **Policy → Compliance**
-2. Select assignment `EnforceEnvironmentTag`
-3. View non-compliant resources and history
+```bash
+git add .
+git commit -m "Azure Policy definition - Enforce Location"
+git push
+```
 
-✅ Use in CI/CD pipeline as a pre-check gate.
+## 🧪 Post-Deployment Testing
+
+### 🧾 List All Policy Assignments
+
+```bash
+az policy assignment list \
+  --query "[].{Name:name, Scope:scope, DisplayName:displayName}" \
+  --output table
+```
+> ➡️ This will show all assignments, including their names and scopes (e.g., subscription or resource group).
+
+### 🔎 Show Details of a Specific Assignment
+
+```bash
+az policy assignment show \
+  --name enforce-allowed-locations \
+  --output json
+```
+> ➡️ Replace enforce-allowed-locations with your actual assignment name (if different).
+
+### ❌ Test Non-Compliant Resource
+
+```bash
+az group create \
+  --name test-nsw-rg \
+  --location australiasoutheast
+```
+> Expected Result: ❌ Fails with a policy violation error\
+> Reason: Location australiasoutheast is not allowed.
+
+### ❌ Test Non-Compliant Storage Account 
+
+```bash
+az storage account create \
+  --name teststorage123456 \
+  --resource-group test-aue-rg \
+  --location australiasoutheast \
+  --sku Standard_LRS
+```
+>Expected Result: ❌ Fails with policy denial\
+>Reason: Location is outside of allowed region (australiaeast).
 
 ---
 
-### 7️⃣ Remediate Non-Compliant Resources
+## 🧹 Remove the Policy Assignment and Definition
 
-#### 🌐 Azure Portal:
+### ❌ Remove the Policy Assignment
 
-1. Go to **Azure Policy → Compliance**
-2. Select `EnforceEnvironmentTag`
-3. Click **Create remediation task**
-4. Provide tag value: `environment=dev`
-5. Click **Remediate**
+```bash
+az policy assignment delete \
+  --name enforce-allowed-locations
+```
+>✅ This removes the active enforcement on the scope.
 
-✅ Azure will attempt auto-remediation.
+### 🧻 Delete the Policy Definition
+
+```bash
+az policy definition delete \
+  --name allowed-locations
+```
+>✅ This removes the custom policy definition itself from your subscription.
 
 ---
 
 ## ✅ Lab Complete
 
-You assigned an Azure Policy using Portal, CLI, and ARM, tested enforcement, remediated violations, and validated compliance – integrating governance into your CI/CD process.
+You have:
 
+- 🛡️ Defined an Azure Policy to restrict resources to `australiaeast`
+- 🤖 Automated the definition and assignment via GitHub Actions
+- 🧱 Used a Bicep template to assign policy at the subscription scope
+- 🔐 Secured access using GitHub OIDC authentication and Azure secrets

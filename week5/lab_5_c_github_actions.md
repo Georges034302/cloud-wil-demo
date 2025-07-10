@@ -26,8 +26,9 @@
 ### 1️⃣ Create GitHub Actions Workflow
 
 ```bash
+# From the root of your GitHub repo
 mkdir -p .github/workflows
-nano .github/workflows/deploy.yml
+touch .github/workflows/deploy.yml
 ```
 
 Paste the following:

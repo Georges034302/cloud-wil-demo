@@ -1,180 +1,60 @@
-# 📈 Lab 5-F: Monitor CI/CD Pipelines with Azure Monitor
+# 📈 Lab 5-F: Monitor CI/CD Pipelines with Azure Monitor (Portal Only)
 
 ## 🎯 Objectives
 
-- Connect CI/CD pipeline activity to Azure Monitor for visibility and alerting
-- Use Log Analytics to query deployment and resource activity
-- Create an Alert Rule to notify when deployments fail
-- View CI/CD telemetry such as pipeline triggers, errors, and policy violations
+- Monitor CI/CD pipeline activity using Azure Monitor
+- Enable diagnostic logs for CI/CD governance and visibility
+- Create a Log Analytics workspace and view deployment telemetry
+- Trigger alerts on pipeline failure or policy violations
 - Understand how monitoring improves delivery reliability
 
 ---
 
 ## 🛠️ Requirements
 
-- Azure CLI installed (`az login`)
-- Azure Portal access
-- Azure subscription
-- Resource group: `lab5-rg` with existing deployments
-- Log Analytics Workspace (created via CLI, Portal, or ARM)
-- Optional: CI/CD pipeline in GitHub Actions or Azure DevOps
+| Requirement         | Description                                |
+|---------------------|--------------------------------------------|
+| ✅ Azure Portal      | Access to [portal.azure.com](https://portal.azure.com) |
+| ✅ Azure Subscription | Subscription with permission to create resources |
+| ✅ Existing RG       | `lab5-rg` resource group from prior labs   |
 
 ---
 
-## 👣 Lab Instructions
+## 👣 Lab Instructions (Portal Only)
 
 ### 1️⃣ Create Log Analytics Workspace
 
-#### 🌐 Azure Portal:
-
-1. Go to **Azure Portal** → Search: **Log Analytics workspaces**
+1. In Azure Portal, search for **Log Analytics workspaces**
 2. Click **+ Create**
-3. Under **Basics**:
-   - **Resource Group**: `lab5-rg`
-   - **Name**: `lab5-logs`
-   - **Region**: `Australia East`
+3. In the **Basics** tab:
+   - Resource Group: `lab5-rg`
+   - Name: `lab5-logs`
+   - Region: `Australia East`
 4. Click **Review + Create** → **Create**
-
-#### 💻 Azure CLI:
-
-```bash
-az monitor log-analytics workspace create \
-  --resource-group lab5-rg \
-  --workspace-name lab5-logs \
-  --location australiaeast
-```
-
-#### 🧱 ARM Template:
-
-Create `loganalytics-template.json`:
-
-```json
-{
-  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-  "contentVersion": "1.0.0.0",
-  "parameters": {
-    "workspaceName": {
-      "type": "string"
-    },
-    "location": {
-      "type": "string"
-    }
-  },
-  "resources": [
-    {
-      "type": "Microsoft.OperationalInsights/workspaces",
-      "apiVersion": "2021-06-01",
-      "name": "[parameters('workspaceName')]",
-      "location": "[parameters('location')]",
-      "properties": {
-        "sku": {
-          "name": "PerGB2018"
-        },
-        "retentionInDays": 30
-      }
-    }
-  ]
-}
-```
-
-Deploy it:
-
-```bash
-az deployment group create \
-  --resource-group lab5-rg \
-  --template-file loganalytics-template.json \
-  --parameters workspaceName=lab5-logs location=australiaeast
-```
 
 ---
 
 ### 2️⃣ Enable Diagnostic Settings on Resource Group
 
-#### 🌐 Azure Portal:
-
-1. Go to **Resource Groups** → `lab5-rg`
-2. Select **Diagnostic settings**
+1. Go to **Resource Groups** → select `lab5-rg`
+2. On the left menu, click **Diagnostic settings**
 3. Click **+ Add diagnostic setting**
 4. Name: `rg-diag-logs`
-5. Check logs: ✅ **AllLogs**, ✅ **Policy**
-6. Select destination: ✅ **Send to Log Analytics**
-7. Choose workspace: `lab5-logs`
-8. Click **Save**
-
-#### 💻 Azure CLI:
-
-```bash
-RG_ID=$(az group show --name lab5-rg --query id --output tsv)
-WS_ID=$(az monitor log-analytics workspace show --resource-group lab5-rg --workspace-name lab5-logs --query id --output tsv)
-
-az monitor diagnostic-settings create \
-  --name rg-diag-logs \
-  --resource "$RG_ID" \
-  --logs '[{"category": "AllLogs", "enabled": true}, {"category": "Policy", "enabled": true}]' \
-  --workspace "$WS_ID"
-```
-
-#### 🧱 ARM Template:
-
-Create `diagnostic-settings-template.json`:
-
-```json
-{
-  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-  "contentVersion": "1.0.0.0",
-  "parameters": {
-    "workspaceId": {
-      "type": "string"
-    },
-    "resourceId": {
-      "type": "string"
-    }
-  },
-  "resources": [
-    {
-      "type": "Microsoft.Insights/diagnosticSettings",
-      "apiVersion": "2021-05-01-preview",
-      "name": "rg-diag-logs",
-      "properties": {
-        "workspaceId": "[parameters('workspaceId')]",
-        "logs": [
-          {
-            "category": "AllLogs",
-            "enabled": true
-          },
-          {
-            "category": "Policy",
-            "enabled": true
-          }
-        ]
-      }
-    }
-  ]
-}
-```
-
-Deploy it:
-
-```bash
-az deployment group create \
-  --resource-group lab5-rg \
-  --template-file diagnostic-settings-template.json \
-  --parameters \
-    resourceId="/subscriptions/<sub-id>/resourceGroups/lab5-rg" \
-    workspaceId="/subscriptions/<sub-id>/resourceGroups/lab5-rg/providers/Microsoft.OperationalInsights/workspaces/lab5-logs"
-```
-
-🔁 Replace `<sub-id>` with your actual subscription ID.
+5. Check:
+   - ✅ **AllLogs**
+   - ✅ **Policy**
+6. Under **Destination details**, select:
+   - ✅ **Send to Log Analytics workspace**
+   - Workspace: `lab5-logs`
+7. Click **Save**
 
 ---
 
-### 3️⃣ Query Logs with Kusto Query Language (KQL)
+### 3️⃣ Query Logs in Log Analytics
 
-#### 🌐 Azure Portal:
-
-1. Go to **Log Analytics workspaces** → `lab5-logs`
-2. Click **Logs**
-3. Paste the following KQL:
+1. In the Portal, go to **Log Analytics workspaces**
+2. Select `lab5-logs` → Click **Logs**
+3. Paste this KQL query:
 
 ```kql
 AzureDiagnostics
@@ -184,51 +64,71 @@ AzureDiagnostics
 | sort by TimeGenerated desc
 ```
 
-4. Click **Run**
-
-✅ View CI/CD deployment logs and policy violations
+4. Click **Run**  
+✅ You should see deployment activity, errors, and policy logs.
 
 ---
 
 ### 4️⃣ Create Alert Rule for Failed Deployments
 
-#### 🌐 Azure Portal:
-
-1. Go to **Monitor → Alerts → + Create → Alert rule**
-2. Scope: Choose `lab5-rg`
-3. Condition:
-   - Choose **Custom log search**
-   - Paste the above KQL
-   - Set threshold: `result count > 0 in last 5 minutes`
-4. Action Group:
-   - Click **+ Create new** → Name: `DevOpsAlerts`
-   - Add Email action
-5. Alert Details:
-   - Name: `DeploymentFailuresAlert`
+1. Go to **Monitor → Alerts**
+2. Click **+ Create → Alert rule**
+3. Scope: Select `lab5-rg`
+4. Condition:
+   - Click **Custom log search**
+   - Paste the same KQL from step 3
+   - Set threshold: `Result count > 0 in last 5 minutes`
+5. Action Group:
+   - Click **+ Create new**
+   - Name: `DevOpsAlerts`
+   - Add your email address under **Notifications**
+6. Alert Details:
+   - Alert name: `DeploymentFailuresAlert`
    - Severity: 2 (High)
-6. Click **Create alert rule**
+7. Click **Create alert rule**
 
-✅ You will now be alerted if any CI/CD pipeline deployment fails.
+✅ You will now be alerted when deployment or policy failures occur.
 
 ---
 
-### 5️⃣ Trigger a Failed Deployment to Test Alert
+### 5️⃣ Trigger a Failed Deployment (Validation)
 
+To simulate failure:
+
+1. Go to **Azure Portal → Storage accounts**
+2. Click **+ Create**
+3. Use:
+   - Name: `failstoragelab5`
+   - Resource Group: `lab5-rg`
+   - Region: `Australia East`
+   - Tags: Leave empty if a **"Require Tag"** policy is active
+4. Click **Review + Create** → **Create**
+
+❌ If tag policy is active, deployment should fail and appear in logs.
+
+---
+
+### 🧹 Final Cleanup (Important)
+
+To remove all resources created in this lab series:
+
+1. In **Azure Portal**, search for **Resource groups**
+2. Select `lab5-rg`
+3. Click **🗑️ Delete resource group**
+4. Enter `lab5-rg` to confirm and delete
+
+Or use CLI to delete the resource group
 ```bash
-az storage account create \
-  --name baddeployfail1234 \
-  --resource-group lab5-rg \
-  --location australiaeast \
-  --sku Standard_LRS
+az group delete --name lab5-rg --yes --no-wait
 ```
-
-🚫 This will fail if Azure Policy (e.g., tag enforcement) is active.
-
-✅ This failure will be logged and can trigger alerts.
+⚠️ This will delete all labs A–F deployments and telemetry.
 
 ---
 
 ## ✅ Lab Complete
 
-You configured monitoring for CI/CD pipelines using Azure Monitor, Log Analytics, and alert rules. You also used ARM, CLI, and Portal for full automation and observability.
-
+- 📈 Configured centralized monitoring for CI/CD pipelines using Azure Monitor and Log Analytics
+- 📝 Enabled diagnostic logs for governance and visibility
+- 🔍 Queried deployments using KQL in Log Analytics
+- 🚨 Created actionable alerts for deployment failures and policy violations
+- ✅ Improved governance and reliability of your

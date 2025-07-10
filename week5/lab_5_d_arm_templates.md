@@ -1,64 +1,96 @@
-# 🧱 Lab 5-D: Define Infrastructure with ARM Templates
+# 🧱 Lab 5-D: Deploy Python App with ARM Template via GitHub Actions
 
 ## 🌟 Objectives
 
-- Understand the structure and purpose of ARM (Azure Resource Manager) templates
-- Define Azure infrastructure declaratively using JSON
-- Deploy resources using Portal, CLI, and ARM
-- Parameterize templates for reusability
-- Validate and troubleshoot deployments using outputs and logs
+- Define Azure infrastructure using an ARM template for App Service
+- Deploy a Python web app using GitHub Actions
+- Use `AZURE_CREDENTIALS` secret to authenticate CI pipeline
+- Validate end-to-end CI/CD using Infrastructure as Code (IaC)
 
 ---
 
 ## 🛠️ Requirements
 
-- Azure CLI installed and authenticated (`az login`)
-- Access to [Azure Portal](https://portal.azure.com)
-- Code editor (e.g., VS Code)
-- Existing Resource Group: `lab5-rg`
+| Requirement         | Description                                                  |
+| ------------------- | ------------------------------------------------------------ |
+| ✅ GitHub repository | Python app from Lab 5-B (with `joke-api.py`)                |
+| ✅ Azure CLI         | Installed and authenticated (`az login`)                    |
+| ✅ GitHub CLI        | Installed and authenticated using PAT (Lab 5-A)             |
+| ✅ `.env` file       | Contains `APP_NAME`, `RG_NAME`, and is in `.gitignore`      |
+| ✅ GitHub Secrets    | Includes `APP_NAME` and `AZURE_CREDENTIALS` for CI          |
 
 ---
 
-## 👣 Lab Instructions
+## 📁 Project Structure
 
-### 1️⃣ Understand ARM Template Structure
+```bash
+# From the root of your GitHub repo
+mkdir -p .github/workflows
+nano .github/workflows/deploy-arm.yml
+```
 
-An ARM template is a JSON file with:
+Final file layout:
 
-- `$schema`: ARM schema definition
-- `contentVersion`: Template version
-- `parameters`: Dynamic inputs
-- `resources`: Resources to provision
-- `outputs`: Return values (optional)
+```bash
+📁 your-repo/
+├── joke-api/
+│   ├── joke-api.py
+│   ├── requirements.txt
+│   └── azuredeploy.json
+└── .github/
+    └── workflows/
+        └── deploy-arm.yml
+```
 
 ---
 
-### 2️⃣ Create a Sample ARM Template
+## 📄 ARM Template (joke-api/azuredeploy.json)
 
-Save this as `azuredeploy.json`:
+Save this inside the `joke-api` folder:
 
 ```json
 {
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
-    "storageAccountName": {
-      "type": "string",
-      "minLength": 3,
-      "maxLength": 24
+    "appName": {
+      "type": "string"
+    },
+    "planName": {
+      "type": "string"
+    },
+    "location": {
+      "type": "string"
     }
   },
   "resources": [
     {
-      "type": "Microsoft.Storage/storageAccounts",
-      "apiVersion": "2022-09-01",
-      "name": "[parameters('storageAccountName')]",
-      "location": "[resourceGroup().location]",
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2022-03-01",
+      "name": "[parameters('planName')]",
+      "location": "[parameters('location')]",
       "sku": {
-        "name": "Standard_LRS"
+        "name": "F1",
+        "tier": "Free"
       },
-      "kind": "StorageV2",
-      "properties": {}
+      "properties": {
+        "reserved": true
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2022-03-01",
+      "name": "[parameters('appName')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverfarms', parameters('planName'))]"
+      ],
+      "properties": {
+        "serverFarmId": "[parameters('planName')]",
+        "siteConfig": {
+          "linuxFxVersion": "PYTHON|3.11"
+        }
+      }
     }
   ]
 }
@@ -66,73 +98,71 @@ Save this as `azuredeploy.json`:
 
 ---
 
-### 3️⃣ (Optional) Create a Parameters File
+## 🤖 GitHub Actions Workflow (.github/workflows/deploy-arm.yml)
 
-Save this as `azuredeploy.parameters.json`:
+Save this to `.github/workflows/deploy-arm.yml`:
 
-```json
-{
-  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
-  "contentVersion": "1.0.0.0",
-  "parameters": {
-    "storageAccountName": {
-      "value": "lab5storage1234"
-    }
-  }
-}
+```yaml
+name: Deploy Python App using ARM
+
+on:
+  push:
+    branches: ["main"]
+
+jobs:
+  deploy-python-app:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r joke-api/requirements.txt
+
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy Infrastructure with ARM
+        uses: azure/arm-deploy@v1
+        with:
+          scope: resourceGroup
+          resourceGroupName: ${{ secrets.RG_NAME }}
+          template: joke-api/azuredeploy.json
+          parameters: >-
+            appName=${{ secrets.APP_NAME }} 
+            planName=plan-${{ secrets.APP_NAME }} 
+            location=australiaeast
+
+      - name: Zip Python App
+        run: zip -r app.zip joke-api
+
+      - name: Deploy App Code
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ secrets.APP_NAME }}
+          publish-profile: ${{ secrets.AZURE_CREDENTIALS }}
+          package: app.zip
 ```
-
----
-
-### 4️⃣ Deploy Using Azure Portal
-
-1. Visit [Azure Portal](https://portal.azure.com)
-2. Search for **Deploy a custom template**
-3. Click **Build your own template in the editor**
-4. Paste `azuredeploy.json` contents
-5. Click **Save**
-6. Choose **Resource Group**: `lab5-rg`
-7. Set **storageAccountName** to `lab5storage1234`
-8. Click **Review + Create** → **Create**
-
-✅ Resource deployed via portal
-
----
-
-### 5️⃣ Deploy Using Azure CLI
-
-```bash
-az deployment group create \
-  --resource-group lab5-rg \
-  --template-file azuredeploy.json \
-  --parameters azuredeploy.parameters.json
-```
-
-✅ CLI confirms provisioning status
-
----
-
-### 6️⃣ Validate the Deployment
-
-#### 📃 Azure CLI:
-
-```bash
-az resource list \
-  --resource-group lab5-rg \
-  --output table
-```
-
-✅ Should show `lab5storage1234`
-
-#### 🌐 Azure Portal:
-
-1. Go to **Resource groups** → `lab5-rg`
-2. Find the Storage Account
-3. Confirm name and configuration
 
 ---
 
 ## ✅ Lab Complete
 
-You created a reusable ARM template, deployed it using Portal and CLI, and verified infrastructure using multiple tools.
+You have:
+
+- 🧱 Defined infrastructure using a parameterized ARM template
+- 🤖 Created a GitHub Actions workflow to deploy App Service
+- 🐍 Packaged and deployed a Python web app via CI
+- 🔐 Authenticated using secure GitHub Secrets
+- ✅ Achieved full infrastructure and application automation
 
