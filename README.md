@@ -70,8 +70,8 @@ This guide provides a week-by-week overview of the `Cloud Computing` IATD course
   Automate deployments and enforce compliance with CI/CD pipelines and Azure Policy:
 
   **Labs:**
-  - CI/CD introduction ([lab_5_a_cicd_intro.md](week5/lab_5_a_cicd_intro.md))
-  - Azure DevOps pipeline setup ([lab_5_b_azure_devops_pipeline.md](week5/lab_5_b_azure_devops_pipeline.md))
+  - CI/CD introduction ([lab_5_a_cicd_prep.md](week5/lab_5_a_cicd_prep.md))
+  - Azure DevOps pipeline setup ([lab_5_b_app_service_python.md](week5/lab_5_b_app_service_python.md))
   - GitHub Actions for Azure deployment ([lab_5_c_github_actions.md](week5/lab_5_c_github_actions.md))
   - ARM template infrastructure as code ([lab_5_d_arm_templates.md](week5/lab_5_d_arm_templates.md))
   - Azure Policy integration in CI/CD ([lab_5_e_azure_policy_cicd.md](week5/lab_5_e_azure_policy_cicd.md))
