@@ -74,7 +74,8 @@ TENANT_ID=$(az account show --query tenantId -o tsv)
 #### 🆔 4.2 Create or Reuse Service Principal
 
 ```bash
-SP_NAME="gh-actions-sp"
+SP_NAME="gh-actions-sp$RANDOM" # must be unique
+echo "export SP_NAME=$SP_NAME" >> .env
 APP_ID=$(az ad sp list --display-name "$SP_NAME" --query "[0].appId" -o tsv || true)
 
 if [[ -z "$APP_ID" ]]; then
