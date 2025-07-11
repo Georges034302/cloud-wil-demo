@@ -31,10 +31,10 @@
 ```bash
 mkdir joke-api
 cd joke-api
-touch joke-api.py requirements.txt
+touch app.py requirements.txt
 ```
 
-#### 🐍 Python App `joke-api.py` 
+#### 🐍 Python App `app.py` 
 
 ```python
 from flask import Flask, jsonify
