@@ -37,7 +37,7 @@ By the end of this lab, you will:
 3. Copy the token and store it in a `.env` file:
 
 ```bash
-echo "ADMIN_TOKEN=ghp_xxxxxxxxxxxxxxxxx" >> .env
+echo "export ADMIN_TOKEN=ghp_xxxxxxxxxxxxxxxxx" >> .env
 echo ".env" >> .gitignore
 ```
 
