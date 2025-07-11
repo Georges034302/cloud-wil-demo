@@ -109,8 +109,8 @@ CLIENT_SECRET=$(az ad app credential reset   --id "$APP_ID"   --append   --query
 LOCATION="australiaeast"
 RG_NAME="lab5-rg"
 
-echo "LOCATION=$LOCATION" >> .env # store LOCATION in .env
-echo "RG_NAME=$RG_NAME" >> .env # store RG_NAME in .env
+echo "export LOCATION=$LOCATION" >> .env # store LOCATION in .env
+echo "export RG_NAME=$RG_NAME" >> .env # store RG_NAME in .env
 
 az provider register --namespace Microsoft.Web
 
@@ -144,9 +144,9 @@ EOF
 #### 🚀 6.2 Upload GitHub Secrets
 
 ```bash
-APP_NAME="lab5app<yourname>" # generate a unique app name
+APP_NAME="lab5app$RANDOM" # generate a unique app name
 
-echo "APP_NAME=$APP_NAME" >> .env # store APP_NAME in .env
+echo "export APP_NAME=$APP_NAME" >> .env # store APP_NAME in .env
 
 echo "$APP_NAME" | gh secret set APP_NAME
 echo "$AZURE_CREDENTIALS" | gh secret set AZURE_CREDENTIALS
