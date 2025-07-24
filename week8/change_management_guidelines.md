@@ -6,7 +6,7 @@
       <span style="font-size: 1.7em; font-weight: bold;">🧭 Purpose</span><br>
       To define a structured, standardized approach for managing changes to Azure environments, minimizing risk, ensuring traceability, and aligning with operational governance.
     </td>
-    <td style="width:220px; text-align: right; border: none;">
+    <td style="width:500px; text-align: right; border: none;">
       <img src="CM.png" alt="Change Management" width="400"/>
     </td>
   </tr>
