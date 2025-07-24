@@ -2,7 +2,7 @@
 
 <table border="0" style="width:100%; border: none; border-collapse: collapse;">
   <tr>
-    <td style="vertical-align: top; border: none; text-align: left;">
+    <td style="vertical-align: top; text-align: left; border: none;">
       <span style="font-size: 1.7em; font-weight: bold;">🧭 Purpose</span><br>
       To define a structured, standardized approach for managing changes to Azure environments, minimizing risk, ensuring traceability, and aligning with operational governance.
     </td>
