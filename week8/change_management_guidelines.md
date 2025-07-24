@@ -7,7 +7,7 @@
       To define a structured, standardized approach for managing changes to Azure environments, minimizing risk, ensuring traceability, and aligning with operational governance.
     </td>
     <td style="width:500px; text-align: right; border: none;">
-      <img src="CM.png" alt="Change Management" width="400"/>
+      <img width="1536" height="1024" alt="CM" src="https://github.com/user-attachments/assets/5174265e-c437-4aeb-aa1f-ec0498a1d7ce" />
     </td>
   </tr>
 </table>
