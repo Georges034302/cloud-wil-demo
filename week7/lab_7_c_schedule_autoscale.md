@@ -13,7 +13,8 @@
 ## 🛠️ Requirements
 
 - Azure CLI installed (`az login`)
-- App Service Plan (e.g., `Lab7Plan`) in Standard or higher tier
+- A running App Service in a Standard or higher tier (load from .env)
+- App Service Plan associated with the app (load from .env)
 - Resource group (e.g., `lab7-rg`)
 - Autoscaling must already be enabled (see Lab 7-B)
 
@@ -21,95 +22,58 @@
 
 ## 👣 Lab Instructions
 
-### 1️⃣ Open Autoscale Settings (Azure Portal)
+### 1️⃣ Configure Auto-Scaling using Portal
 
 1. Go to [Azure Portal](https://portal.azure.com)
-2. Navigate to **App Service Plans** → Select `Lab7Plan`
+2. Navigate to **App Service Plans** → Select `$PLAN_NAME`
 3. In the left pane, click **Scale out (App Service plan)**
 4. Click **Custom autoscale** to configure profiles
 
----
 
-### 2️⃣ Create Business Hours Profile (Weekdays)
+#### Create Business Hours Profile (Weekdays)
 
 1. Click **+ Add a scale condition** → Name: `BusinessHoursScaling`
-2. Under **Recurrence**, set:
-   - Time zone: Your local time zone (e.g., `AUS Eastern Standard Time`)
-   - Days: Monday to Friday
-   - Start time: 08:00
-   - End time: 18:00
+2. Instance Count: 1
 3. Instance limits:
    - Minimum: 3
    - Maximum: 5
    - Default: 3
-4. Click **Add**
+4. Repeat specific days (select week days)
+   - Time zone: Your local time zone (e.g., `AUS Eastern Standard Time`)
+   - Select the Start and End dates
+   - Start time: 08:00
+   - End time: 18:00
+5. Click **Add**
 
 ✅ Enables higher capacity during business hours.
 
----
 
-### 3️⃣ Create Off-Hours Profile (Nights & Weekends)
+#### Create Off-Hours Profile (Nights & Weekends)
 
 1. Click **+ Add a scale condition** → Name: `OffHoursScaling`
-2. Recurrence:
-   - Days: Monday to Sunday
-   - Start time: 18:00
-   - End time: 08:00 (next day)
-3. Instance limits:
-   - Minimum: 1
-   - Maximum: 1
-   - Default: 1
-4. Click **Add** → then **Save** the profile
+2. Instance Count: 1
+4. Repeat specific days (Select weekend days)
+   - Time zone: Your local time zone (e.g., `AUS Eastern Standard Time`)
+   - Select the Start and End dates
+   - Start time: 00:00
+   - End time: 18:00
+5. Click **Add**
 
 ✅ Reduces resource usage outside of business hours.
 
 ---
 
-### 4️⃣ Schedule Autoscale Rules via CLI
-
-#### Create Autoscale Setting:
+### Delete the Existing Autoscale Setting
 
 ```bash
-az monitor autoscale create \
-  --resource-group lab7-rg \
-  --resource Lab7Plan \
-  --resource-type Microsoft.Web/serverfarms \
-  --name lab7-scheduled-scale \
-  --count 1 --min-count 1 --max-count 5 \
-  --location australiaeast
+az monitor autoscale delete \
+  --resource-group $RG \
+  --name app-service-plan-25188-Autoscale-784
 ```
-
-#### Add Business Hours Profile:
-
-```bash
-az monitor autoscale profile create \
-  --resource-group lab7-rg \
-  --autoscale-name lab7-scheduled-scale \
-  --name BusinessHoursScaling \
-  --timezone "AUS Eastern Standard Time" \
-  --recurrence frequency=Week daysofweek=Monday,Tuesday,Wednesday,Thursday,Friday \
-  --start 08:00 --end 18:00 \
-  --min-count 3 --max-count 5 --count 3
-```
-
-#### Add Off-Hours Profile:
-
-```bash
-az monitor autoscale profile create \
-  --resource-group lab7-rg \
-  --autoscale-name lab7-scheduled-scale \
-  --name OffHoursScaling \
-  --timezone "AUS Eastern Standard Time" \
-  --recurrence frequency=Week daysofweek=Sunday,Monday,Tuesday,Wednesday,Thursday,Friday,Saturday \
-  --start 18:00 --end 08:00 \
-  --min-count 1 --max-count 1 --count 1
-```
-
-✅ CLI setup enables precise and repeatable schedules.
 
 ---
 
-### 5️⃣ Schedule Autoscale via ARM Template
+### 2️⃣ Schedule Autoscale via ARM Template
 
 Create `schedule-autoscale.json`:
 
@@ -174,7 +138,7 @@ Then deploy:
 
 ```bash
 az deployment group create \
-  --resource-group lab7-rg \
+  --resource-group $RG \
   --template-file schedule-autoscale.json
 ```
 
@@ -182,7 +146,7 @@ az deployment group create \
 
 ---
 
-### 6️⃣ Monitor Scheduled Autoscale Activity
+### 3️⃣ (Optional) Monitor Scheduled Autoscale Activity Over Time
 
 #### 🌐 Azure Portal:
 
@@ -197,7 +161,7 @@ az deployment group create \
 
 ```bash
 az monitor activity-log list \
-  --resource-group lab7-rg \
+  --resource-group $RG \
   --max-events 10 \
   --query "[?contains(operationName.value, 'Autoscale')].{Time:eventTimestamp, Operation:operationName.value, Status:status.value}" \
   --output table

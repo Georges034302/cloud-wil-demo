@@ -8,7 +8,6 @@
 - Use Azure Portal, CLI, and ARM to configure scaling profiles
 - Monitor VMSS activity and instance count
 
----
 
 ## 🛠️ Requirements
 
@@ -19,98 +18,130 @@
 
 ---
 
-## 👣 Lab Instructions
+## ✅ Option 1: Azure Portal
 
-### 1️⃣ Create a Virtual Machine Scale Set
+### 🔗 Navigate to Azure VMSS Creation
+- Go to [https://portal.azure.com](https://portal.azure.com)
+- Search for **"Virtual Machine Scale Sets"**
+- Click **+ Create**
 
-#### 🌐 Azure Portal:
 
-1. Go to [Azure Portal](https://portal.azure.com)
-2. Click **Create a resource** → Search: *Virtual Machine Scale Set*
-3. Fill in:
-   - **Resource group**: `lab7-rg`
-   - **Name**: `lab7-vmss`
-   - **Region**: Australia East
-   - **Orchestration mode**: Uniform
-   - **Image**: Ubuntu Server 20.04 LTS
-   - **Admin username/password**: Your choice
-   - **Instance count**: 2
-   - **Scaling**: Enabled
-   - **Autoscale settings**: Skip (configured later)
-   - **Networking**: Accept defaults
-4. Click **Review + Create** → **Create**
+### 🧾 Tab 1: Basics
 
-✅ A VMSS with default networking and load balancing will be deployed.
+| Field                 | Value                      |
+|----------------------|----------------------------|
+| **Subscription**     | Azure subscription 1       |
+| **Resource group**   | `lab7-rg` (or create new)  |
+| **Name**             | `lab7vmss`                 |
+| **Region**           | Australia East             |
+| **Orchestration**    | Flexible                   |
+| **Security type**    | Trusted launch             |
 
-#### 💻 Azure CLI:
 
-```bash
-az vmss create \
-  --resource-group lab7-rg \
-  --name lab7-vmss \
-  --image UbuntuLTS \
-  --admin-username azureuser \
-  --admin-password <your-password> \
-  --upgrade-policy-mode automatic \
-  --vm-sku Standard_B1s \
-  --instance-count 2
-```
 
-✅ Creates a VMSS with 2 Ubuntu VMs and automatic upgrade policy.
+### 🧮 Tab 2: Scaling
+
+| Field                 | Value                            |
+|----------------------|----------------------------------|
+| **Scaling mode**     | Manually update the capacity     |
+| **Instance count**   | 2                                |
+| **Zones**            | None (or enable if desired)      |
+
+
+
+### 💻 Tab 3: Instance Details
+
+| Field                    | Value                            |
+|-------------------------|----------------------------------|
+| **Image**               | Ubuntu Pro 22.04 LTS – x64 Gen2 |
+| **VM architecture**     | x64                             |
+| **Size**                | Standard_D2s_v3                 |
+
+
+
+### 🔐 Tab 4: Administrator Account
+
+| Field                   | Value                      |
+|------------------------|----------------------------|
+| **Authentication type** | Password                  |
+| **Username**            | `azureuser`               |
+| **Password**            | YourSecurePassword123!    |
+
+
+
+### ✅ Final Steps
+
+- Leave **Disks**, **Networking**, **Management**, etc., as default
+- Click **Review + Create** → **Create**
 
 ---
 
-### 2️⃣ Configure Autoscaling for the VMSS
 
-#### 🌐 Azure Portal:
 
-1. Go to **Virtual Machine Scale Sets** → Select `lab7-vmss`
-2. In the left pane, click **Scaling**
-3. Click **Custom autoscale**
-4. Set:
-   - **Minimum**: 2
-   - **Maximum**: 5
-   - **Default**: 2
-5. Add Rule 1 – **Scale Out**:
-   - Metric: CPU Percentage
-   - Condition: Greater than 70% for 5 minutes
-   - Action: Increase instance count by 1
-6. Add Rule 2 – **Scale In**:
-   - Metric: CPU Percentage
-   - Condition: Less than 30% for 5 minutes
-   - Action: Decrease instance count by 1
-7. Click **Save**
+## 🖥️ Option 2: Azure CLI (Username + Password)
 
-✅ Autoscaling is now enabled based on CPU thresholds.
-
-#### 💻 Azure CLI:
+### 📦 Define Variables
 
 ```bash
-az monitor autoscale create \
-  --resource-group lab7-rg \
-  --resource lab7-vmss \
-  --resource-type Microsoft.Compute/virtualMachineScaleSets \
-  --name lab7-vmss-autoscale \
-  --min-count 2 \
-  --max-count 5 \
-  --count 2
-
-az monitor autoscale rule create \
-  --resource-group lab7-rg \
-  --autoscale-name lab7-vmss-autoscale \
-  --condition "Percentage CPU > 70 avg 5m" \
-  --scale out 1
-
-az monitor autoscale rule create \
-  --resource-group lab7-rg \
-  --autoscale-name lab7-vmss-autoscale \
-  --condition "Percentage CPU < 30 avg 5m" \
-  --scale in 1
+RG="lab7-rg"
+VMSS_NAME="lab7vmss"
+LOCATION="australiaeast"
+IMAGE="Canonical:0001-com-ubuntu-pro-jammy:pro-22_04-lts-gen2:latest"
+VM_SIZE="Standard_D2s_v3"
+ADMIN_USER="azureuser"
+read -s -p "Enter VMSS admin password: " ADMIN_PASS
 ```
 
-✅ CLI rules match Portal configuration for scale-out and scale-in.
 
-#### 📄 ARM Template (autoscale-vmss.json):
+### 🏗️ Create Resource Group
+
+```bash
+az group create \
+  --name $RG \
+  --location $LOCATION
+```
+
+
+### 🏗️ Create the VMSS with Password Auth
+
+```bash
+# Create a new Virtual Machine Scale Set (VMSS) with password authentication
+# - Uses flexible orchestration mode
+# - Deploys 2 Ubuntu Pro 22.04 LTS VMs of size Standard_D2s_v3
+# - Sets admin username and prompts for password
+az vmss create \
+  --resource-group $RG \
+  --name $VMSS_NAME \
+  --orchestration-mode Flexible \
+  --image $IMAGE \
+  --instance-count 2 \
+  --admin-username $ADMIN_USER \
+  --admin-password $ADMIN_PASS \
+  --vm-sku $VM_SIZE \
+  --location $LOCATION \
+  --platform-fault-domain-count 1
+```
+
+
+### 🔍 Verify Deployment
+
+```bash
+# Show details of the created VMSS, including instance count
+az vmss show \
+  --resource-group $RG \
+  --name $VMSS_NAME \
+  --query "{name:name, location:location, instances:sku.capacity}" \
+  --output table
+```
+
+---
+
+
+## 🧱 Option 3: ARM Template (Password Auth)
+
+### 📄 `vmss-deploy.json`
+
+> ⚠️ Replace `<YOUR-SUBNET-ID>` with the correct resource ID of an existing subnet.
 
 ```json
 {
@@ -118,108 +149,96 @@ az monitor autoscale rule create \
   "contentVersion": "1.0.0.0",
   "resources": [
     {
-      "type": "Microsoft.Insights/autoscalesettings",
-      "apiVersion": "2015-04-01",
-      "name": "lab7-vmss-autoscale",
+      "type": "Microsoft.Compute/virtualMachineScaleSets",
+      "apiVersion": "2023-09-01",
+      "name": "lab7vmss",
       "location": "australiaeast",
+      "sku": {
+        "name": "Standard_D2s_v3",
+        "tier": "Standard",
+        "capacity": 2
+      },
       "properties": {
-        "targetResourceUri": "/subscriptions/<sub-id>/resourceGroups/lab7-rg/providers/Microsoft.Compute/virtualMachineScaleSets/lab7-vmss",
-        "enabled": true,
-        "profiles": [
-          {
-            "name": "AutoScaleProfile",
-            "capacity": {
-              "minimum": "2",
-              "maximum": "5",
-              "default": "2"
-            },
-            "rules": [
+        "orchestrationMode": "Flexible",
+        "platformFaultDomainCount": 1,
+        "virtualMachineProfile": {
+          "storageProfile": {
+            "imageReference": {
+              "publisher": "Canonical",
+              "offer": "0001-com-ubuntu-pro-jammy",
+              "sku": "pro-22_04-lts-gen2",
+              "version": "latest"
+            }
+          },
+          "osProfile": {
+            "adminUsername": "azureuser",
+            "adminPassword": "YourSecurePassword123!",
+            "computerNamePrefix": "lab7vmss",
+            "linuxConfiguration": {
+              "disablePasswordAuthentication": false
+            }
+          },
+          "hardwareProfile": {
+            "vmSize": "Standard_D2s_v3"
+          },
+          "networkProfile": {
+            "networkInterfaceConfigurations": [
               {
-                "metricTrigger": {
-                  "metricName": "Percentage CPU",
-                  "metricNamespace": "Microsoft.Compute/virtualMachineScaleSets",
-                  "timeGrain": "PT1M",
-                  "statistic": "Average",
-                  "timeWindow": "PT5M",
-                  "timeAggregation": "Average",
-                  "operator": "GreaterThan",
-                  "threshold": 70,
-                  "dimensions": []
-                },
-                "scaleAction": {
-                  "direction": "Increase",
-                  "type": "ChangeCount",
-                  "value": "1",
-                  "cooldown": "PT5M"
-                }
-              },
-              {
-                "metricTrigger": {
-                  "metricName": "Percentage CPU",
-                  "metricNamespace": "Microsoft.Compute/virtualMachineScaleSets",
-                  "timeGrain": "PT1M",
-                  "statistic": "Average",
-                  "timeWindow": "PT5M",
-                  "timeAggregation": "Average",
-                  "operator": "LessThan",
-                  "threshold": 30,
-                  "dimensions": []
-                },
-                "scaleAction": {
-                  "direction": "Decrease",
-                  "type": "ChangeCount",
-                  "value": "1",
-                  "cooldown": "PT5M"
+                "name": "nic-lab7vmss",
+                "properties": {
+                  "primary": true,
+                  "ipConfigurations": [
+                    {
+                      "name": "ipconfig1",
+                      "properties": {
+                        "subnet": {
+                          "id": "<YOUR-SUBNET-ID>"
+                        }
+                      }
+                    }
+                  ]
                 }
               }
             ]
           }
-        ]
+        }
       }
     }
   ]
 }
 ```
 
-📦 Deploy the template:
+---
+
+### 🚀 Deploy the ARM Template
 
 ```bash
 az deployment group create \
-  --resource-group lab7-rg \
-  --template-file autoscale-vmss.json
+  --resource-group $RG \
+  --template-file vmss-deploy.json
 ```
-
-🔁 Replace `<sub-id>` with your Azure subscription ID.
 
 ---
 
-### 3️⃣ Monitor VMSS Instances and Scaling History
+---
 
-#### 🌐 Azure Portal:
+## 📋 Summary Table: VMSS Deployment Options
+---
 
-- Go to `lab7-vmss` → **Instances** to view VMs
-- Navigate to **Scaling** → View **Run history** and triggers
+## 📋 Summary Table: VMSS Deployment Options
 
-#### 💻 Azure CLI:
+| Option      | Method           | Orchestration | Instance Count | Notes                                      |
+|-------------|------------------|----------------|----------------|--------------------------------------------|
+| Option 1    | **Azure Portal** | Flexible       | 2              | Most user-friendly, guided UI              |
+| Option 2    | **Azure CLI**    | Flexible       | 2              | Scriptable and automatable                 |
+| Option 3    | **ARM Template** | Flexible       | 2              | Infrastructure as Code (IaC); reusable     |
 
-```bash
-az vmss list-instances \
-  --name lab7-vmss \
-  --resource-group lab7-rg \
-  --output table
-
-az monitor activity-log list \
-  --resource-group lab7-rg \
-  --max-events 10 \
-  --query "[?contains(operationName.value, 'Autoscale')].{Time:eventTimestamp, Operation:operationName.value, Status:status.value}" \
-  --output table
-```
-
-✅ Use these to verify scaling events and VM count.
+> 💡 All options use Ubuntu Pro 22.04 LTS and `Standard_D2s_v3` (comparable to App Service S1).
 
 ---
 
-## ✅ Lab Complete
+✅ You now know how to deploy VM Scale Sets using three different methods depending on your preference for manual UI, CLI automation, or declarative templates.
 
-You successfully deployed a VMSS and configured CPU-based autoscaling using Azure Portal, CLI, and ARM templates.
+
+
 

@@ -4,120 +4,147 @@
 
 - Understand how Azure App Service pricing tiers limit scaling capacity
 - Compare scale-out limits across Free, Basic, Standard, and Premium tiers
-- Test how many instances can be manually or automatically provisioned
+- Test how many instances can be provisioned manually or automatically
 - Use Azure Portal, CLI, and ARM to evaluate and enforce tier-specific scaling limits
-- Learn how pricing decisions affect availability and cost planning
+- Learn how pricing decisions affect scalability and cost planning
 
 ---
 
 ## 🛠️ Requirements
 
-- Azure Portal access
-- Azure CLI installed (`az login`)
-- App Service Plan deployed (e.g., `Lab7Plan`)
-- App deployed to App Service (e.g., `lab7app`)
+- Azure subscription
+- Azure CLI installed and logged in (`az login`)
+- App Service Plan deployed (see .env)
+- App deployed to App Service (see .env)
 - Optional: A second App Service Plan in a different tier for comparison
 
 ---
 
-## 👣 Lab Instructions
+## 🚦 Overview of App Service Tier Limits
 
-### 1️⃣ Review Current App Service Tier
+Each App Service pricing tier defines the **maximum number of instances** (scale-out capacity). Example:
 
-#### 🌐 Azure Portal:
-
-1. Go to [Azure Portal](https://portal.azure.com)
-2. Navigate to **App Services** → Select `lab7app`
-3. In the left menu, click **Scale up (App Service plan)**
-4. Review your current pricing tier (e.g., Free, Basic, Standard, Premium)
-5. Click **View all tiers** to compare available plans
-
-✅ Note how each tier defines max instances (e.g., Standard S1 supports up to 10 instances).
-
-#### 💻 Azure CLI:
-
-```bash
-az webapp show \
-  --name lab7app \
-  --resource-group lab7-rg \
-  --query "serverFarmId"
-
-az appservice plan show \
-  --name Lab7Plan \
-  --resource-group lab7-rg \
-  --query sku.name
-```
-
-✅ Confirms current tier for capacity assessment.
+| Tier       | Max Instances | Notes                    |
+|------------|----------------|---------------------------|
+| Free (F1)  | 1              | No scaling supported      |
+| Basic (B1) | 3              | Limited autoscale         |
+| Standard (S1) | 10          | Supports autoscale        |
+| Premium (P1v2, P2v2, etc.) | 20–30+       | High scale, better performance |
 
 ---
 
-### 2️⃣ List Scaling Capabilities for All Tiers
+## 🧭 Option 1: Azure Portal
 
-#### 💻 Azure CLI:
+### 1️⃣ Check Current Tier and Limits
+
+1. Go to [Azure Portal](https://portal.azure.com)
+2. Navigate to **App Services** → Select ` <Web App name`
+3. Click on the linked **App Service Plan**
+4. In the left menu, select **Scale up (App Service plan)**
+5. Observe current pricing tier and compare available options
+
+✅ You’ll see instance limits (e.g., S1 → max 10 instances)
+
+---
+
+### 2️⃣ Attempt to Scale Out (Up to Tier Limit)
+
+1. Go to **Scale out (App Service plan)**
+2. Set instance count within your tier’s supported range
+3. Save changes
+
+✅ Scaling succeeds if within tier limits.
+
+---
+
+### 3️⃣ Attempt to Scale Out Beyond Tier Limit
+
+1. Try setting instance count above the max allowed (e.g., 30 for S1)
+2. Click Save
+
+❌ You will get a validation error from Azure.
+
+---
+
+### 4️⃣ Upgrade Tier and Scale Again
+
+1. Go to **Scale up**
+2. Select a **Premium V2** tier (e.g., P2v2)
+3. Apply the change
+4. Return to **Scale out** and set instance count to 20+
+
+✅ Scaling succeeds with Premium tiers.
+
+---
+
+## 💻 Option 2: Azure CLI
+
+### 1️⃣ Check Current App Service Plan Tier
 
 ```bash
-az appservice list-skus \
-  --location australiaeast \
+az appservice plan show \
+  --name $PLAN_NAME \
+  --resource-group $RG \
+  --query "sku.name"
+
+az appservice plan show \
+  --name $PLAN_NAME \
+  --resource-group $RG \
+  --query "{Tier:sku.tier, Size:sku.name, MaxInstances:maximumNumberOfWorkers}" \
   --output table
 ```
 
-✅ Output includes:
+---
 
-- `skuName`: Name of the SKU (e.g., F1, S1, P1v2)
-- `capacity`: Max number of instances supported
-- `tier`: Pricing tier name
-- `enabled`: Availability in region
+### 2️⃣ List Scaling Capabilities by SKU
+
+```bash
+az graph query -q "
+resources
+| where type == 'microsoft.web/serverfarms'
+| where location == 'australiaeast'
+| project name, sku = sku.name, tier = sku.tier, capacity = sku.capacity
+" --output table
+```
+
+✅ Observe max instance capacity by tier.
 
 ---
 
-### 3️⃣ Attempt to Scale Beyond Tier Limit
-
-#### 💻 Azure CLI:
+### 3️⃣ Attempt to Scale Beyond Current Tier
 
 ```bash
 az appservice plan update \
-  --name Lab7Plan \
-  --resource-group lab7-rg \
+  --name $PLAN_NAME  \
+  --resource-group $RG \
   --number-of-workers 30
 ```
 
-✅ Expected Error:
+❌ Expected Error:
 
 ```
 ERROR: Cannot scale to 30 workers. Tier 'S1' only supports up to 10.
 ```
 
-Azure enforces instance limits per tier.
-
 ---
 
-### 4️⃣ Change Tier and Retest Scaling
-
-#### 🌐 Azure Portal:
-
-1. Navigate to **App Service Plan** → Click **Scale up**
-2. Select a Premium v2 tier (e.g., `P2v2`)
-3. Click **Apply** to confirm
-4. Go to **Scale out** → Set instance count to 20+
-
-#### 💻 Azure CLI:
+### 4️⃣ Upgrade Tier and Scale to 20 Workers
 
 ```bash
 az appservice plan update \
-  --name Lab7Plan \
-  --resource-group lab7-rg \
+  --name $PLAN_NAME \
+  --resource-group $RG \
   --sku P2v2 \
   --number-of-workers 20
 ```
 
-✅ Premium tiers allow for higher scalability.
+✅ App Service Plan is now Premium V2 and running with 20 instances.
 
 ---
 
-### 5️⃣ ARM Template for Scaling Tier
+## 🧱 Option 3: ARM Template
 
-Create `scale-tier-update.json`:
+### 1️⃣ Create `scale-tier-update.json`
 
 ```json
 {
@@ -127,34 +154,46 @@ Create `scale-tier-update.json`:
     {
       "type": "Microsoft.Web/serverfarms",
       "apiVersion": "2022-03-01",
-      "name": "Lab7Plan",
+      "name": "<Lab 7 App Plan>",
       "location": "australiaeast",
-      "properties": {
-        "numberOfWorkers": 20
-      },
       "sku": {
         "name": "P2v2",
         "tier": "PremiumV2",
         "capacity": 20
+      },
+      "properties": {
+        "numberOfWorkers": 20
       }
     }
   ]
 }
 ```
 
-#### 💻 Deploy via CLI:
+---
+
+### 2️⃣ Deploy the Template
 
 ```bash
 az deployment group create \
-  --resource-group lab7-rg \
+  --resource-group $RG \
   --template-file scale-tier-update.json
 ```
 
-✅ ARM confirms App Service Plan update with new capacity.
+✅ App Service Plan is updated to Premium V2 with 20 instances via ARM.
+
+---
+
+## 📋 Summary Table: Tier Scaling Test Methods
+
+| Option    | Method         | Scaling Attempted | Outcome                         |
+|-----------|----------------|-------------------|----------------------------------|
+| Option 1  | Azure Portal   | Manual, UI-based  | Tier blocks >max, upgrade works |
+| Option 2  | Azure CLI      | Manual via command | CLI error if exceeding tier     |
+| Option 3  | ARM Template   | Declarative IaC   | Scales as long as tier allows   |
 
 ---
 
 ## ✅ Lab Complete
 
-You tested and compared App Service scaling limits across pricing tiers using Azure Portal, CLI, and ARM templates to understand how SKU selection impacts scalability and cost.
+You validated Azure App Service Plan scaling limits using the Portal, CLI, and ARM template methods. You observed how **pricing tier directly impacts scalability**, and practiced upgrading and scaling App Service Plans across tier boundaries.
 

@@ -13,8 +13,8 @@
 ## 🛠️ Requirements
 
 - Azure CLI installed (`az login`)
-- A running App Service in a Standard or higher tier (e.g., `lab7app`)
-- App Service Plan associated with the app (e.g., `Lab7Plan`)
+- A running App Service in a Standard or higher tier (load from .env)
+- App Service Plan associated with the app (load from .env)
 - A resource group (e.g., `lab7-rg`)
 
 ---
@@ -34,8 +34,8 @@
 
 ```bash
 az appservice plan show \
-  --name Lab7Plan \
-  --resource-group lab7-rg \
+  --name $PLAN_NAME \
+  --resource-group $RG \
   --query sku.tier
 ```
 
@@ -46,8 +46,10 @@ az appservice plan show \
 ### 2️⃣ Configure Autoscale via Azure Portal
 
 1. Go to **App Service Plan** → **Scale out (App Service plan)**
-2. Toggle **Enable autoscale** to `On`
-3. Click **+ Add a rule**
+2. Select **Rule Based** then select **Configure**
+3. Toggle **Custom autoscale**
+4. Toggle **Scale based on a metric**
+5. Select ** Add a rule**
 
 **Scale-out rule:**
 
@@ -83,23 +85,30 @@ az appservice plan show \
 #### Create Autoscale Profile:
 
 ```bash
+# Option 1: Create new Autoscale profile (this will reset existing profile)
 az monitor autoscale create \
-  --resource-group lab7-rg \
-  --resource Lab7Plan \
+  --resource-group $RG \
+  --resource $PLAN_NAME \
   --resource-type Microsoft.Web/serverfarms \
-  --name lab7-autoscale \
+  --name $AUTOSCALE_NAME \
   --min-count 1 \
   --max-count 5 \
   --count 2
+
+# Option 2: Get exsiting Auto-scale profile (to add more rules)
+AUTOSCALE_NAME=$(az monitor autoscale list \
+  --resource-group $RG \
+  --query "[?contains(targetResourceUri, '$PLAN_NAME')].name" \
+  --output tsv)
 ```
 
 #### Add Scale-Out Rule:
 
 ```bash
 az monitor autoscale rule create \
-  --resource-group lab7-rg \
-  --autoscale-name lab7-autoscale \
-  --condition "Percentage CPU > 70 avg 5m" \
+  --resource-group $RG \
+  --autoscale-name $AUTOSCALE_NAME \
+  --condition "CpuPercentage > 80 avg 5m" \
   --scale out 1
 ```
 
@@ -108,8 +117,8 @@ az monitor autoscale rule create \
 ```bash
 az monitor autoscale rule create \
   --resource-group lab7-rg \
-  --autoscale-name lab7-autoscale \
-  --condition "Percentage CPU < 30 avg 5m" \
+  --autoscale-name $AUTOSCALE_NAME \
+  --condition "CpuPercentage < 30 avg 5m" \
   --scale in 1
 ```
 
@@ -130,10 +139,10 @@ Create `autoscale-settings.json`:
     {
       "type": "Microsoft.Insights/autoscalesettings",
       "apiVersion": "2015-04-01",
-      "name": "lab7-autoscale",
+      "name": "<add the correct auto scaling profile>",
       "location": "australiaeast",
       "properties": {
-        "targetResourceUri": "/subscriptions/<sub-id>/resourceGroups/lab7-rg/providers/Microsoft.Web/serverfarms/Lab7Plan",
+        "targetResourceUri": "/subscriptions/<sub-id>/resourceGroups/lab7-rg/providers/Microsoft.Web/serverfarms/<web app plan>",
         "enabled": true,
         "profiles": [
           {
@@ -194,35 +203,32 @@ Create `autoscale-settings.json`:
 Deploy it:
 
 ```bash
+# Deploy the ARM template
 az deployment group create \
-  --resource-group lab7-rg \
+  --resource-group $RG \
   --template-file autoscale-settings.json
+
+# Vefiy the ARM deployment
+az monitor autoscale show \
+  --resource-group lab7-rg \
+  --name app-service-plan-25188-Autoscale-784 \
+  --query "profiles[].rules[].metricTrigger"
 ```
 
 🔁 Replace `<sub-id>` with your subscription ID.
 
 ---
 
-### 5️⃣ Monitor Autoscale Activity
+### 5️⃣ (Optional) Monitor Autoscale Activity
 
 #### 🌐 Azure Portal:
 
 1. Go to **Monitor** → **Autoscale**
-2. Select `lab7-autoscale`
+2. Select `<auto-scale-name>`
 3. View:
    - Evaluation results
    - Triggered actions
    - Rule history
-
-#### 💻 Azure CLI:
-
-```bash
-az monitor activity-log list \
-  --resource-group lab7-rg \
-  --max-events 10 \
-  --query "[?contains(operationName.value, 'Autoscale')].{Time:eventTimestamp, Operation:operationName.value, Status:status.value}" \
-  --output table
-```
 
 ✅ Confirms autoscale actions were triggered.
 
