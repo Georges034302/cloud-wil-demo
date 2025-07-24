@@ -220,11 +220,6 @@ az deployment group create \
 
 ---
 
----
-
-## 📋 Summary Table: VMSS Deployment Options
----
-
 ## 📋 Summary Table: VMSS Deployment Options
 
 | Option      | Method           | Orchestration | Instance Count | Notes                                      |
