@@ -1,13 +1,13 @@
 # 📘 Azure Change Management Guidelines
 
-<table border="0" style="border: none; border-collapse: collapse;">
+<table border="0" style="border: none !important; border-collapse: collapse;">
   <tr>
-    <td style="border: none; vertical-align: top; text-align: left;">
+    <td style="border: none !important; vertical-align: top; text-align: left;">
       <span style="font-size: 1.5em; font-weight: bold;">🧭 Purpose</span>
       <br>
       To define a structured, standardized approach for managing changes to Azure environments, minimizing risk, ensuring traceability, and aligning with operational governance.
     </td>    
-    <td style="vertical-align: middle; border: none;">
+    <td style="vertical-align: middle; border: none !important;">
       <img src="CM.png" alt="Change Management" width="600"/>
     </td>
   </tr>
