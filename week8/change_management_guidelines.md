@@ -1,10 +1,6 @@
+# 📘 Azure Change Management Guidelines
+
 <table style="border-collapse: collapse; border: none;">
-  <tr>
-    <td colspan="2" style="border: none;">
-      <span style="font-size: 2em; font-weight: bold;">📘 Azure Change Management Guidelines</span>
-   </td>
-    
-  </tr>
   <tr>
     <td style="border: none;">
     <h3>🧭 Purpose</h3>
