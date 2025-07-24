@@ -3,11 +3,11 @@
 <table style="width:100%; border: none;">
   <tr>
     <td style="vertical-align: top; border: none;">
-      <span style="font-size: 1.5em; font-weight: bold;">🧭 Purpose</span><br>
+      <span style="font-size: 1.7em; font-weight: bold;">🧭 Purpose</span><br>
       To define a structured, standardized approach for managing changes to Azure environments, minimizing risk, ensuring traceability, and aligning with operational governance.
     </td>
     <td style="width:220px; text-align: right; border: none;">
-      <img src="CM.png" alt="Change Management" width="200"/>
+      <img src="CM.png" alt="Change Management" width="400"/>
     </td>
   </tr>
 </table>
