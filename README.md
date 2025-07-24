@@ -101,7 +101,23 @@ This guide provides a week-by-week overview of the `Cloud Computing` IATD course
 
 </details>
 
+<details>
+  <summary>Week 8: Project – Change Management & Presentation</summary>
+
+  Apply your Azure skills in a real-world scenario focused on change management:
+
+  **Project:**
+  - Plan and implement a change management process for a cloud-based solution
+  - Prepare and deliver a presentation demonstrating your solution, process, and outcomes
+  - Reflect on lessons learned and best practices for managing change in cloud environments
+
+</details>
+
 ---
 
 ✅ Each lab folder contains `.md` walkthroughs with both Portal and CLI steps, supporting files, and validation instructions. Continue learning by customizing labs with your own workloads!
+
+---
+#### 🧑‍🏫 Author: Georges Bou Ghantous
+<sub><i>This repository offers practical lab materials for the Cloud Computing IATD course at WIL. It guides learners through hands-on Azure labs covering scripting, networking, storage, security, containers, scaling, automation, and serverless computing, all using real-world scenarios and best practices.</i></sub>
 
