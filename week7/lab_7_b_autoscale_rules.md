@@ -220,7 +220,7 @@ az deployment group create \
 # Vefiy the ARM deployment
 az monitor autoscale show \
   --resource-group lab7-rg \
-  --name app-service-plan-25188-Autoscale-784 \
+  --name $AUTOSCALE_NAME \
   --query "profiles[].rules[].metricTrigger"
 ```
 
