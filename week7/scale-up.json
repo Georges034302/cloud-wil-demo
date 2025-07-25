@@ -1,0 +1,18 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {},
+  "resources": [
+    {
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2022-03-01",
+      "name": "app-service-plan-2480",
+      "location": "australiaeast",
+      "sku": {
+        "name": "S1",
+        "tier": "Standard",
+        "capacity": 1
+      }
+    }
+  ]
+}

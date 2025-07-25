@@ -100,6 +100,14 @@ AUTOSCALE_NAME=$(az monitor autoscale list \
   --resource-group $RG \
   --query "[?contains(targetResourceUri, '$PLAN_NAME')].name" \
   --output tsv)
+
+# Get the Profile name
+PROFILE_NAME=$(az monitor autoscale show \
+  --resource-group $RG \
+  --name $AUTOSCALE_NAME \
+  --query "profiles[].name" \
+  --output tsv)
+
 ```
 
 #### Add Scale-Out Rule:
@@ -108,6 +116,7 @@ AUTOSCALE_NAME=$(az monitor autoscale list \
 az monitor autoscale rule create \
   --resource-group $RG \
   --autoscale-name $AUTOSCALE_NAME \
+  --profile-name $PROFILE_NAME \
   --condition "CpuPercentage > 80 avg 5m" \
   --scale out 1
 ```
