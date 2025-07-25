@@ -128,7 +128,7 @@ az monitor autoscale rule create \
   --resource-group $RG \
   --autoscale-name $AUTOSCALE_NAME \
   --profile-name $PROFILE_NAME \
-  --condition "CpuPercentage < 30 avg 5m" \
+  --condition "CpuPercentage < 20 avg 5m" \
   --scale in 1
 ```
 
