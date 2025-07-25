@@ -102,12 +102,11 @@ AUTOSCALE_NAME=$(az monitor autoscale list \
   --output tsv)
 
 # Get the Profile name
-PROFILE_NAME=$(az monitor autoscale show \
+PROFILE_NAME="$(az monitor autoscale show \
   --resource-group $RG \
   --name $AUTOSCALE_NAME \
-  --query "profiles[].name" \
-  --output tsv)
-
+  --query "profiles[0].name" \
+  --output tsv)"
 ```
 
 #### Add Scale-Out Rule:
@@ -127,7 +126,7 @@ az monitor autoscale rule create \
 az monitor autoscale rule create \
   --resource-group $RG \
   --autoscale-name $AUTOSCALE_NAME \
-  --profile-name $PROFILE_NAME \
+  --profile-name "$PROFILE_NAME" \
   --condition "CpuPercentage < 20 avg 5m" \
   --scale in 1
 ```
