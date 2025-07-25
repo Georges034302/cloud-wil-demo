@@ -68,7 +68,7 @@
 ```bash
 az monitor autoscale delete \
   --resource-group $RG \
-  --name app-service-plan-25188-Autoscale-784
+  --name $APPSCALE_NAME
 ```
 
 ---
