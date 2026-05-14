@@ -118,6 +118,5 @@ This guide provides a week-by-week overview of the `Cloud Computing` IATD course
 ✅ Each lab folder contains `.md` walkthroughs with both Portal and CLI steps, supporting files, and validation instructions. Continue learning by customizing labs with your own workloads!
 
 ---
-#### 🧑‍🏫 Author: Georges Bou Ghantous
-<sub><i>This repository offers practical lab materials for the Cloud Computing IATD course at WIL. It guides learners through hands-on Azure labs covering scripting, networking, storage, security, containers, scaling, automation, and serverless computing, all using real-world scenarios and best practices.</i></sub>
+<sub><i><span style="color:#B0B0B0">👤 Author: Dr. Georges Bou Ghantous</span></i></sub>
 
